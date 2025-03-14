@@ -1,0 +1,47 @@
+#selected{
+    background-color: blue;
+}
+
+td{
+text-align: center;
+border: 2px solid black;
+}
+
+#GameTable{
+    background-color: burlywood;
+    height: 270px;
+    width: 300px;
+}
+
+table{
+    width: 300px;
+    flex: auto;
+}
+
+#fightTable{
+    border: 1px solid black;
+    width: 100%;
+    display: none;
+}
+
+#ExampleTables{
+    background-color: burlywood;
+    height: 270px;
+    width: auto;
+    display: none;
+}
+
+.size1{
+    background-color: #9fe3b1;
+    height: 50px;
+}
+
+.size2{
+    background-color: #e3d29f;
+    height: 100px;
+}
+
+.size3{
+    background-color: #e39f9f;
+    height: 150px;
+}

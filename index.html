@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="cs-cz">
+<head>
+    <meta charset="UTF-8">
+    <title>Bazaar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body id="bodyElement">
+    <div class="Controls">
+        <button id="begin" onclick="begin()">Begin</button>
+        <br><br>
+        <label for="teams">Tým:</label>
+
+      <select name="teams" id="teams" onchange="changeBoard()">
+        <option value=0>Zluti</option>
+        <option value=1>Modri</option>
+        <option value=2>Ruzovi</option>
+        <option value=3>Zeleni</option>
+        <option value=4>Oranzovi</option>
+      </select>
+      <br><br>
+        <input type="number" id="item"><br>
+        <button id="add" onclick="addItem()">Add</button>
+        <button id="upArrow" onclick="pushUp()">↑</button>
+        <button id="downArrow" onclick="pushDown()">↓</button>
+        <button id="delete" onclick="deleteItem()">del</button>
+        <button id="delete" onclick="resetSelect()">∅</button>
+     </div>  
+      <br><br>
+      <div id="GameTable">
+        <table id="table"></table>
+      </div>
+      <div id="ExampleTables">
+        <table id="p0"></table> 
+        <table id="p1"></table> 
+        <table id="p2"></table> 
+        <table id="p3"></table> 
+        <table id="p4"></table> 
+      </div>
+      <p id="sandCounter"></p>
+      <table id="fightTable">
+           
+      </table>
+    
+    <script src="script.js"></script>
+</body>
+</html>
