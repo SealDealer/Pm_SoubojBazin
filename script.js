@@ -20,7 +20,7 @@ class Item{
         if(this.TimeSpent >= this.time){
             this.TimeSpent -= this.time;
             for(let i = 0;i<this.abilities.length;i++){
-                if(this.abilities[i].funcName != "cool"){return;};
+                if(this.abilities[i].type != "cool"){return;};
                 this.abilities[i].func(match,boardId,pos);
             }
         }
@@ -72,6 +72,7 @@ class Match{
     Boards = [];
     players = [];
     winner = -1;
+    closed = false;
     constructor(board1,board2,player1,player2){
         // create unlinked instances for specific match
         this.Boards.push(board1.Mirror());
@@ -93,14 +94,15 @@ class Match{
 
     checkWin(){
         if(!fighting){return;}
-        const couldDraw = this.winner != -1;
+        if(this.closed){return;}
         if(this.Boards[0].hp<=0){
             this.winner = 1;
-            if(couldDraw){this.winner = 3};
         }
         if(this.Boards[1].hp<=0){
             this.winner = 0;
-            if(couldDraw){this.winner = 3};
+        }
+        if(this.Boards[1].hp<=0 && this.Boards[0].hp<=0){
+            this.winner = 3;
         }
     }
 }
@@ -115,18 +117,27 @@ class Ability{
     // start - on battle start
     // event - on event
     constructor(func,data){
-        switch(func){
+        let isStart = false;
+        let newFunc = func;
+        if(func.includes("OnStart")){
+            newFunc = func.split(" ")[0];
+            isStart = true;
+        }
+        switch(newFunc){
             case "dmg":
                 this.func = this.dmg;
-                this.type = "cool"
+                this.type = "cool";
                 break;
             case "buffDmgAbove":
                 this.func = this.buffDmgAbove;
-                this.type = "buff"
+                this.type = "buff";
                 break;
         }
-        this.data = data;
+        if(isStart){
+            this.type = "start";
+        }
         this.funcName = func;
+        this.data = data;
     }
 
     // Abilities-----------------------------------------------------------------
@@ -211,12 +222,6 @@ function deleteItem(){
     ShowBoard("table");
 }
 
-function resetSelect(){
-    if(fighting){return;}
-    selected = -1;
-    ShowBoard("table");
-}
-
 function begin(){
     document.getElementById("GameTable").style.display = "none";
     document.getElementById("ExampleTables").style.display = "flex";
@@ -226,6 +231,7 @@ function begin(){
     interval = setInterval(UpdateItems,1000*timeIncrement);
     fighting = true;
     selected = -1;
+    matches = [];
     for(let i = 0;i<Boards.length;i++){
         let row = [];
         for(let j = 0;j<i;j++){
@@ -238,6 +244,28 @@ function begin(){
     for(let i =0;i<5;i++){
         exampleMatches[i] = new Match(Boards[i],dummy,i,null);
     }
+
+    //trigger start events
+    for(let k = 0;k<matches.length;k++){
+        const matchRow = matches[k];
+        for(let l = 0;l<matchRow.length;l++){
+            const currentMatch = matchRow[l];
+            for(let m = 0;m<2;m++){
+                const currentBoard = currentMatch.Boards[m];
+                for(let i = 0;i<currentBoard.Play.length;i++){
+                    const currentItem =  currentBoard.Play[i];
+                    for(let j = 0;j<currentItem.abilities.length;j++){
+                        const currentAbility = currentItem.abilities[j];
+                        if(currentAbility.type == "start"){
+                            currentAbility.func(currentMatch,m,i);
+                        }
+                    }
+                }
+            }
+        }
+    }
+   
+
     ShowFightTable();
 }
 
@@ -264,7 +292,12 @@ function addItem(){
 
 function click(index){
     if(fighting){return;}
-    selected = index;
+    if(selected == index){
+        selected = -1;
+    }
+    else{
+        selected = index;
+    }
     ShowBoard("table");
 }
 
@@ -304,17 +337,23 @@ function ShowBoard(id){
         for(let j = 0;j<board.Play[i].abilities.length;j++){
             const current = board.Play[i].abilities[j];
             if(current.type == "cool"){coolExists = true;}
-            switch(current.funcName){
+            if(current.funcName.includes("OnStart")){
+                abilityP.innerHTML += "S:";
+            }
+            if(current.funcName.includes("dmg")){
+                abilityP.innerHTML += current.data+"dmg";
+            }
+            /*switch(current.funcName){
                 case "dmg":
                     abilityP.innerHTML += current.data + " dmg";
                     break;
                 case "buffDmgAbove":
                     abilityP.innerHTML += "↑ +"+current.data + " dmg";
                     break;
-            }
+            }*/
         }
         if(!coolExists){
-            row.deleteCell(1);
+            progressP.innerHTML = "";
         }
         
     }
@@ -384,6 +423,7 @@ function ShowFightTable(){
 function UpdateItems(){
     if(isEndOfBattle()){
         resetFight();
+        return;
     }
 
    for(let i = 0;i<matches.length;i++){
@@ -431,6 +471,7 @@ function isEndOfBattle(){
     for(let i = 0;i<src.length;i++){
         for(let j =0;j<src[i].length;j++){
             if(src[i][j].winner == -1){stillPlaying = true;}
+            else{src[i][j].closed = true;}
         }
     }
     if(stillPlaying){
@@ -483,14 +524,15 @@ function addBuffs(){
                 }
             }
         }
-    }
+}
 
 // -----------------------------------------------------------------
 
 const ItemLibrary = [
     new ItemFab("item 3s",1,3,[new Ability("dmg",10)]),
     new ItemFab("item 5s",2,5,[new Ability("dmg",10)]),
-    new ItemFab("buff 5dmg up",1,1,[new Ability("buffDmgAbove",5)])
+    new ItemFab("buff 5dmg up",1,1,[new Ability("buffDmgAbove",5)]),
+    new ItemFab("dmg on start",1,1,[new Ability("dmg OnStart",10)])
 ]
 
 const TeamNames =[
@@ -502,13 +544,12 @@ const TeamNames =[
 ]
 
 /* todo:
-    fight not working bug
-    double click = deselect
-
     ability listenery
-    cooldown a start triggery
     save
     další ability
+    jednorazove itemy
+    opravit show buff
+    opravit buff funguje na start
 
     -------------------------------
     animace?
@@ -517,4 +558,8 @@ const TeamNames =[
     haste
     slow 
     freeze
+
+    crit
+    shield
+    heal
 */
