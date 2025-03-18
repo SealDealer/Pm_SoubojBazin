@@ -113,15 +113,16 @@ class Ability{
     funcName;
     type;
     // cool - cooldown
-    // buff - on placement
+    // above/below/all - on placement
     // start - on battle start
     // event - on event
     constructor(func,data){
-        let isStart = false;
+
         let newFunc = func;
-        if(func.includes("OnStart")){
+        let modifier = "";
+        if(func.includes(" ")){
             newFunc = func.split(" ")[0];
-            isStart = true;
+            modifier = func.split(" ")[1];
         }
         switch(newFunc){
             case "dmg":
@@ -133,9 +134,7 @@ class Ability{
                 this.type = "buff";
                 break;
         }
-        if(isStart){
-            this.type = "start";
-        }
+        if(modifier != ""){this.type = modifier}
         this.funcName = func;
         this.data = data;
     }
@@ -519,8 +518,16 @@ function addBuffs(){
             const currentItem =  currentBoard.Play[i];
             for(let j = 0;j<currentItem.abilities.length;j++){
                 const currentAbility = currentItem.abilities[j];
-                if(currentAbility.type == "buff"){
-                    currentAbility.func(null,currentBoard,i);
+                if(currentAbility.type == "above" && i != 0){
+                    const funcToBuff = currentAbility.funcName.split(" ")[0];
+                    const itemToBuff = currentBoard.Play[i-1];
+                    for(let k = 0;k<itemToBuff.abilities.length;k++){
+                        const abilityToBuff = itemToBuff.abilities[k];
+                        if(abilityToBuff.funcName == funcToBuff){
+                            alert("gud");
+                            abilityToBuff.data += currentAbility.data;
+                        }
+                    }
                 }
             }
         }
@@ -550,6 +557,7 @@ const TeamNames =[
     jednorazove itemy
     opravit show buff
     opravit buff funguje na start
+    proceduralni buff
 
     -------------------------------
     animace?
