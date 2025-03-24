@@ -215,6 +215,14 @@ class Ability{
         match.checkWin();
     }
 
+    addCrit(match,boardId,pos){
+        if(match == null){
+            return;
+        }
+        let currentBoard = match.Boards[boardId];
+        currentBoard[pos].crit += this.data;
+    }
+
 }
 
 // -----------------------------------------------------------------
@@ -650,12 +658,10 @@ const TeamNames =[
 /* todo:
     ability listenery
     save
-    další ability
+    ability
+        haste
+        slow
+        freeze
     animace
     crit buff
-
-    todo ability:
-    haste
-    slow 
-    freeze
 */
