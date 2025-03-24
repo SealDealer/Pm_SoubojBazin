@@ -2,6 +2,7 @@ class Item{
     size;
     time;
     name;
+    crit;
     TimeSpent  =0;
     abilities = [];
 
@@ -13,6 +14,7 @@ class Item{
             const currentAbility = fab.abilities[i];
             this.abilities.push(new Ability(currentAbility.funcName,currentAbility.data));
         }
+        this.crit = fab.crit;
     }
 
     age(match,boardId,pos){
@@ -22,6 +24,11 @@ class Item{
             for(let i = 0;i<this.abilities.length;i++){
                 if(this.abilities[i].type != "cool"){return;};
                 this.abilities[i].func(match,boardId,pos);
+
+                //crit chance
+                if(Math.random()*100<this.crit){
+                    this.abilities[i].func(match,boardId,pos);
+                }
             }
         }
     }
@@ -32,12 +39,14 @@ class ItemFab{
     time;
     name;
     abilities = [];
+    crit;
 
-    constructor(name,size,time,abilities){
+    constructor(name,size,time,crit,abilities){
         this.name = name;
         this.size = size;
         this.time = time;
         this.abilities = abilities;
+        this.crit = crit;
     }
 }
 
@@ -47,6 +56,8 @@ class Board{
     maxHP = 100;
     hp = 0;
     Play = [];
+    shield = 0;
+    burn = 0;
 
     constructor(){
         this.hp = this.maxHP;
@@ -90,6 +101,13 @@ class Match{
                 this.Boards[j].Play[i].age(this,j,i);
             }
         }
+
+        if(fightTime%10 == 0){
+            //burn
+        this.Boards[0].hp -= this.Boards[0].burn;
+        this.Boards[1].hp -= this.Boards[1].burn;
+        this.checkWin();
+        }
     }
 
     checkWin(){
@@ -127,14 +145,24 @@ class Ability{
         switch(newFunc){
             case "dmg":
                 this.func = this.dmg;
-                this.type = "cool";
                 break;
-            case "buffDmgAbove":
-                this.func = this.buffDmgAbove;
-                this.type = "buff";
-                break;
+            case "shield":
+                this.func = this.shield;
+            break;
+            case "heal":
+                this.func = this.heal;
+            break;
+            case "burn":
+                this.func = this.burn;
+            break;
         }
-        if(modifier != ""){this.type = modifier}
+        
+        if(modifier != ""){
+            this.type = modifier;
+        }
+        else{
+            this.type = "cool";
+        }
         this.funcName = func;
         this.data = data;
     }
@@ -146,20 +174,47 @@ class Ability{
             return;
         }
         let nepritel = match.Boards[1-boardId];
-        nepritel.hp -= this.data;
+
+        if(nepritel.shield >= this.data){
+            nepritel.shield -= this.data;
+        }
+        else{
+            nepritel.hp -= (this.data-nepritel.shield);
+            nepritel.shield = 0;
+        }
         match.checkWin();
     }
 
-    buffDmgAbove(match,boardId,pos){
-        let currentboard = boardId;
-        if(pos == 0){return;}
-        let currentAbilities = currentboard.Play[pos-1].abilities;
-        for(let i = 0;i<currentAbilities.length;i++){
-            if(currentAbilities[i].funcName == "dmg"){
-                currentAbilities[i].data += this.data;
-            }
+    shield(match,boardId,pos){
+        if(match == null){
+            return;
+        }
+        let currentBoard = match.Boards[boardId];
+        currentBoard.shield += this.data
+    }
+
+    heal(match,boardId,pos){
+        if(match == null){
+            return;
+        }
+        let currentBoard = match.Boards[boardId];
+        if(currentBoard.hp + this.data < currentBoard.maxHP){
+            currentBoard.hp += this.data;
+        }
+        else{
+            currentBoard.hp = currentBoard.maxHP
         }
     }
+
+    burn(match,boardId,pos){
+        if(match == null){
+            return;
+        }
+        let nepritel = match.Boards[1-boardId];
+        nepritel.burn += this.data;
+        match.checkWin();
+    }
+
 }
 
 // -----------------------------------------------------------------
@@ -330,7 +385,8 @@ function ShowBoard(id){
         
         row.classList.add("size"+board.Play[i].size);
         nameP.innerHTML  = board.Play[i].name;
-        progressP.innerHTML = '<progress id="prog'+i.toString()+'" value="'+board.Play[i].TimeSpent.toString()+'" max="'+board.Play[i].time.toString()+'"></progress>';
+        progressP.innerHTML = '<progress id="prog'+i.toString()+'" value="'+board.Play[i].TimeSpent.toString()+'" max="'+board.Play[i].time.toString()+'"></progress>'+
+        "<br>"+board.Play[i].crit + "%💢";
         abilityP.innerHTML = "";
         let coolExists = false;
         for(let j = 0;j<board.Play[i].abilities.length;j++){
@@ -339,17 +395,29 @@ function ShowBoard(id){
             if(current.funcName.includes("OnStart")){
                 abilityP.innerHTML += "S:";
             }
-            if(current.funcName.includes("dmg")){
-                abilityP.innerHTML += current.data+"dmg";
+            if(current.funcName.includes("above")){
+                abilityP.innerHTML += "↑+";
             }
-            /*switch(current.funcName){
-                case "dmg":
-                    abilityP.innerHTML += current.data + " dmg";
-                    break;
-                case "buffDmgAbove":
-                    abilityP.innerHTML += "↑ +"+current.data + " dmg";
-                    break;
-            }*/
+            if(current.funcName.includes("below")){
+                abilityP.innerHTML += "↓+";
+            }
+            if(current.funcName.includes("all")){
+                abilityP.innerHTML += "↕+";
+            }
+
+
+            if(current.funcName.includes("dmg")){
+                abilityP.innerHTML += current.data+"💥 ";
+            }
+            if(current.funcName.includes("shield")){
+                abilityP.innerHTML += current.data+"🛡️ ";
+            }
+            if(current.funcName.includes("heal")){
+                abilityP.innerHTML += current.data+"❤️ ";
+            }
+            if(current.funcName.includes("burn")){
+                abilityP.innerHTML += current.data+"🔥 ";
+            }
         }
         if(!coolExists){
             progressP.innerHTML = "";
@@ -406,7 +474,11 @@ function ShowFightTable(){
                 cell.innerHTML = "Remíza";
             }
             else{
-                cell.innerHTML = drawingBoard.hp.toString()+' hp<br>'+'<progress value="'+drawingBoard.hp.toString()+'" max="'+drawingBoard.maxHP.toString()+'"></progress>';
+                cell.innerHTML = 
+                drawingBoard.hp.toString()+'❤️ '+
+                drawingBoard.shield.toString()+'🛡️ '+
+                drawingBoard.burn.toString()+'🔥<br>'+
+                '<progress value="'+drawingBoard.hp.toString()+'" max="'+drawingBoard.maxHP.toString()+'"></progress>';
             }
         } 
         
@@ -518,14 +590,36 @@ function addBuffs(){
             const currentItem =  currentBoard.Play[i];
             for(let j = 0;j<currentItem.abilities.length;j++){
                 const currentAbility = currentItem.abilities[j];
+
+                let itemToBuff = null
                 if(currentAbility.type == "above" && i != 0){
+                    itemToBuff = currentBoard.Play[i-1];
+                }
+                if(currentAbility.type == "below" && i < currentBoard.Play.length-1){
+                    itemToBuff = currentBoard.Play[i+1];
+                }
+                if(itemToBuff != null){
                     const funcToBuff = currentAbility.funcName.split(" ")[0];
-                    const itemToBuff = currentBoard.Play[i-1];
                     for(let k = 0;k<itemToBuff.abilities.length;k++){
                         const abilityToBuff = itemToBuff.abilities[k];
-                        if(abilityToBuff.funcName == funcToBuff){
-                            alert("gud");
+                        if(abilityToBuff.funcName.includes(funcToBuff)){
                             abilityToBuff.data += currentAbility.data;
+                        }
+                    }
+                }
+
+                if(currentAbility.type == "all"){
+                    const funcToBuff = currentAbility.funcName.split(" ")[0];
+                    for(let l = 0;l<currentBoard.Play.length;l++){
+                        itemToBuff = currentBoard.Play[l];
+                        // buffuje sebe sama
+                        if(l == i){continue;}
+
+                        for(let k = 0;k<itemToBuff.abilities.length;k++){
+                            const abilityToBuff = itemToBuff.abilities[k];
+                            if(abilityToBuff.funcName.includes(funcToBuff)){
+                                abilityToBuff.data += currentAbility.data;
+                            }
                         }
                     }
                 }
@@ -536,10 +630,13 @@ function addBuffs(){
 // -----------------------------------------------------------------
 
 const ItemLibrary = [
-    new ItemFab("item 3s",1,3,[new Ability("dmg",10)]),
-    new ItemFab("item 5s",2,5,[new Ability("dmg",10)]),
-    new ItemFab("buff 5dmg up",1,1,[new Ability("buffDmgAbove",5)]),
-    new ItemFab("dmg on start",1,1,[new Ability("dmg OnStart",10)])
+    new ItemFab("item 3s",1,3,0,[new Ability("dmg",10)]),
+    new ItemFab("item crit",2,2,100,[new Ability("dmg",10)]),
+    new ItemFab("buff 5dmg up",1,1,0,[new Ability("dmg all",5)]),
+    new ItemFab("dmg on start",1,1,0,[new Ability("dmg OnStart",10)]),
+    new ItemFab("shield",1,2,0,[new Ability("shield",10)]),
+    new ItemFab("heal",1,2,0,[new Ability("heal",10)]),
+    new ItemFab("burn",1,2,0,[new Ability("burn",3)]),
 ]
 
 const TeamNames =[
@@ -554,20 +651,11 @@ const TeamNames =[
     ability listenery
     save
     další ability
-    jednorazove itemy
-    opravit show buff
-    opravit buff funguje na start
-    proceduralni buff
-
-    -------------------------------
-    animace?
+    animace
+    crit buff
 
     todo ability:
     haste
     slow 
     freeze
-
-    crit
-    shield
-    heal
 */
