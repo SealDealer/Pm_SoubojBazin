@@ -5,6 +5,9 @@ class Item{
     crit;
     TimeSpent  =0;
     abilities = [];
+    hasteTime = 0;
+    slowTime = 0;
+    freezeTime = 0;
 
     constructor (fab){
         this.size = fab.size;
@@ -12,13 +15,28 @@ class Item{
         this.name = fab.name;
         for(let i =0;i<fab.abilities.length;i++){
             const currentAbility = fab.abilities[i];
-            this.abilities.push(new Ability(currentAbility.funcName,currentAbility.data));
+            this.abilities.push(new Ability(currentAbility.funcName,currentAbility.data,currentAbility.target));
         }
         this.crit = fab.crit;
     }
 
     age(match,boardId,pos){
-        this.TimeSpent += timeIncrement;
+        let ToAge = timeIncrement;
+
+        if(this.hasteTime > 0){
+            this.hasteTime--;
+            ToAge *= 2;
+        }
+        if(this.slowTime > 0){
+            this.slowTime--;
+            ToAge *= .5;
+        }
+        if(this.freezeTime > 0){
+            this.freezeTime--;
+            ToAge = 0;
+        }
+        this.TimeSpent += ToAge;
+
         if(this.TimeSpent >= this.time){
             this.TimeSpent -= this.time;
             for(let i = 0;i<this.abilities.length;i++){
@@ -130,14 +148,16 @@ class Ability{
     data;
     funcName;
     type;
+    target;
     // cool - cooldown
     // above/below/all - on placement
     // start - on battle start
     // event - on event
-    constructor(func,data){
+    constructor(func,data,target){
 
         let newFunc = func;
         let modifier = "";
+
         if(func.includes(" ")){
             newFunc = func.split(" ")[0];
             modifier = func.split(" ")[1];
@@ -155,6 +175,18 @@ class Ability{
             case "burn":
                 this.func = this.burn;
             break;
+            case "crit":
+                this.func = this.crit;
+            break;
+            case "haste":
+                this.func = this.haste;
+            break;
+            case "slow":
+                this.func = this.slow;
+            break;
+            case "freeze":
+                this.func = this.freeze;
+            break;
         }
         
         if(modifier != ""){
@@ -165,6 +197,40 @@ class Ability{
         }
         this.funcName = func;
         this.data = data;
+        this.target = target;
+    }
+
+    getTarget(match,boardId,pos){
+        switch(this.target){
+            case "--":
+                if(pos != 0){
+                    return match.Boards[boardId].Play[pos-1];
+                }
+                else{
+                    return null;
+                }
+
+            case "++":
+                if(pos != match.Boards[boardId].Play.length-1){
+                    return match.Boards[boardId].Play[pos+1];
+                }
+                else{
+                    return null;
+                }
+
+            case "this":
+                return match.Boards[boardId].Play[pos];
+
+            case "enemy":
+                const targetBoardEn = match.Boards[1-boardId].Play;
+                const randomEn = Math.floor(Math.random()*targetBoardEn.length);
+                return targetBoardEn[randomEn];
+
+            case "me":
+                const targetBoardMe = match.Boards[boardId].Play;
+                const randomMe = Math.floor(Math.random()*targetBoardMe.length);
+                return targetBoardMe[randomMe];
+        }
     }
 
     // Abilities-----------------------------------------------------------------
@@ -215,12 +281,44 @@ class Ability{
         match.checkWin();
     }
 
-    addCrit(match,boardId,pos){
+    crit(match,boardId,pos){
         if(match == null){
             return;
         }
-        let currentBoard = match.Boards[boardId];
-        currentBoard[pos].crit += this.data;
+        let toApply = this.getTarget(match,boardId,pos);
+        if(toApply != null){
+            toApply.crit += this.data;
+        }
+    }
+
+    haste(match,boardId,pos){
+        if(match == null){
+            return;
+        }
+        let toApply = this.getTarget(match,boardId,pos);
+        if(toApply != null){
+            toApply.hasteTime += this.data;
+        }
+    }
+
+    slow(match,boardId,pos){
+        if(match == null){
+            return;
+        }
+        let toApply = this.getTarget(match,boardId,pos);
+        if(toApply != null){
+            toApply.slowTime += this.data;
+        }
+    }
+
+    freeze(match,boardId,pos){
+        if(match == null){
+            return;
+        }
+        let toApply = this.getTarget(match,boardId,pos);
+        if(toApply != null){
+            toApply.freezeTime += this.data;
+        }
     }
 
 }
@@ -393,8 +491,24 @@ function ShowBoard(id){
         
         row.classList.add("size"+board.Play[i].size);
         nameP.innerHTML  = board.Play[i].name;
-        progressP.innerHTML = '<progress id="prog'+i.toString()+'" value="'+board.Play[i].TimeSpent.toString()+'" max="'+board.Play[i].time.toString()+'"></progress>'+
-        "<br>"+board.Play[i].crit + "%💢";
+
+        progressP.innerHTML = ""
+        progressP.innerHTML += '<progress id="prog'+i.toString()+'" value="'+board.Play[i].TimeSpent.toString()+'" max="'+board.Play[i].time.toString()+'"></progress>'+"<br>";
+
+        if(board.Play[i].crit != 0){
+            progressP.innerHTML += board.Play[i].crit + "%💢 ";
+        }
+        if(board.Play[i].hasteTime != 0){
+            progressP.innerHTML += board.Play[i].hasteTime +"⚡ ";
+        }
+        if(board.Play[i].slowTime != 0){
+            progressP.innerHTML += board.Play[i].slowTime + "🐌 ";
+        }
+        if(board.Play[i].freezeTime != 0){
+            progressP.innerHTML += board.Play[i].freezeTime + "❄️ ";
+        }
+
+
         abilityP.innerHTML = "";
         let coolExists = false;
         for(let j = 0;j<board.Play[i].abilities.length;j++){
@@ -638,13 +752,8 @@ function addBuffs(){
 // -----------------------------------------------------------------
 
 const ItemLibrary = [
-    new ItemFab("item 3s",1,3,0,[new Ability("dmg",10)]),
-    new ItemFab("item crit",2,2,100,[new Ability("dmg",10)]),
-    new ItemFab("buff 5dmg up",1,1,0,[new Ability("dmg all",5)]),
-    new ItemFab("dmg on start",1,1,0,[new Ability("dmg OnStart",10)]),
-    new ItemFab("shield",1,2,0,[new Ability("shield",10)]),
-    new ItemFab("heal",1,2,0,[new Ability("heal",10)]),
-    new ItemFab("burn",1,2,0,[new Ability("burn",3)]),
+    new ItemFab("item 3s",1,3,0,[new Ability("dmg",10,null)]),
+    new ItemFab("haste",1,3,0,[new Ability("freeze",10,"me")]),
 ]
 
 const TeamNames =[
@@ -657,11 +766,9 @@ const TeamNames =[
 
 /* todo:
     ability listenery
+    jmena pri boji
+
+    postpreludium
     save
-    ability
-        haste
-        slow
-        freeze
     animace
-    crit buff
 */
