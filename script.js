@@ -8,7 +8,7 @@ class Item{
     hasteTime = 0;
     slowTime = 0;
     freezeTime = 0;
-
+    triggers = [];
     constructor (fab){
         this.size = fab.size;
         this.time = fab.time;
@@ -16,6 +16,11 @@ class Item{
         for(let i =0;i<fab.abilities.length;i++){
             const currentAbility = fab.abilities[i];
             this.abilities.push(new Ability(currentAbility.funcName,currentAbility.data,currentAbility.target));
+        }
+        for(let i =0;i<fab.triggers.length;i++){
+            const currentTrigger = fab.triggers[i];
+            this.triggers.push(new Trigger(currentTrigger.event,currentTrigger.ability));
+            this.triggers[i].setPlace(currentTrigger.match,currentTrigger.boardId,currentTrigger.pos);
         }
         this.crit = fab.crit;
     }
@@ -47,6 +52,10 @@ class Item{
                 if(Math.random()*100<this.crit){
                     this.abilities[i].func(match,boardId,pos);
                 }
+
+                //triggery
+                const toTrigger = this.abilities[i].funcName.split(" ")[0];
+                match.checkTriggers(toTrigger);
             }
         }
     }
@@ -56,15 +65,17 @@ class ItemFab{
     size;
     time;
     name;
-    abilities = [];
+    abilities;
     crit;
+    triggers;
 
-    constructor(name,size,time,crit,abilities){
+    constructor(name,size,time,crit,abilities,triggers){
         this.name = name;
         this.size = size;
         this.time = time;
         this.abilities = abilities;
         this.crit = crit;
+        this.triggers = triggers;
     }
 }
 
@@ -102,12 +113,33 @@ class Match{
     players = [];
     winner = -1;
     closed = false;
+    triggers = [];
     constructor(board1,board2,player1,player2){
         // create unlinked instances for specific match
         this.Boards.push(board1.Mirror());
         this.Boards.push(board2.Mirror());
         this.players.push(player1);
         this.players.push(player2);
+        
+
+        for(let i = 0;i<2;i++){
+            const currentBoard = this.Boards[i];
+            for(let j = 0;j<currentBoard.Play.length;j++){
+                const currentItem = currentBoard.Play[j];
+                for(let k = 0;k<currentItem.triggers.length;k++){
+                    const currentTrigger = currentItem.triggers[k];
+                    this.triggers.push(currentTrigger);
+                    this.triggers[this.triggers.length-1].setPlace(this,i,j);
+                    
+                }
+            }
+        }
+    }
+
+    checkTriggers(event){
+        for(let i = 0;i<this.triggers.length;i++){
+            this.triggers[i].check(event);
+        }
     }
 
     age(){
@@ -140,6 +172,31 @@ class Match{
         if(this.Boards[1].hp<=0 && this.Boards[0].hp<=0){
             this.winner = 3;
         }
+    }
+}
+
+class Trigger{
+    ability;
+    event;
+    match;
+    boardId;
+    pos;
+
+    constructor(event,ability){
+        this.ability = ability;
+        this.event = event;
+    }
+
+    check(event){
+        if(event == this.event){
+            this.ability.func(this.match,this.boardId,this.pos);
+        }
+    }
+
+    setPlace(match,boardId,pos){
+        this.match = match;
+        this.boardId = boardId;
+        this.pos = pos;
     }
 }
 
@@ -477,7 +534,16 @@ function ShowBoard(id){
     table.innerHTML = '';
     let board = Boards[selectedBoard];
     if(fighting){
-        board = exampleMatches[parseInt(id[1])].Boards[0];
+        let boardId = parseInt(id[1]);
+        board = exampleMatches[boardId].Boards[0];
+        
+        let header = table.insertRow();
+        header.insertCell(0);
+        let nameCell = header.insertCell(1);
+        header.insertCell(2);
+
+        nameCell.innerHTML = TeamNames[boardId];
+        
     }
     for(let i = 0;i<board.Play.length;i++){
         let row = table.insertRow();
@@ -499,7 +565,7 @@ function ShowBoard(id){
             progressP.innerHTML += board.Play[i].crit + "%💢 ";
         }
         if(board.Play[i].hasteTime != 0){
-            progressP.innerHTML += board.Play[i].hasteTime +"⚡ ";
+            progressP.innerHTML += board.Play[i].hasteTime +"⏰ ";
         }
         if(board.Play[i].slowTime != 0){
             progressP.innerHTML += board.Play[i].slowTime + "🐌 ";
@@ -539,6 +605,47 @@ function ShowBoard(id){
             }
             if(current.funcName.includes("burn")){
                 abilityP.innerHTML += current.data+"🔥 ";
+            }
+            if(current.funcName.includes("haste")){
+                abilityP.innerHTML += current.data+"⏰ ";
+            }
+            if(current.funcName.includes("slow")){
+                abilityP.innerHTML += current.data+"🐌 ";
+            }
+            if(current.funcName.includes("freeze")){
+                abilityP.innerHTML += current.data+"❄️ ";
+            }
+        }
+
+        for(let j = 0;j<board.Play[i].triggers.length;j++){
+            let current = board.Play[i].triggers[j];
+            if(current.event == "dmg"){
+                abilityP.innerHTML += "💥";
+            }
+
+            abilityP.innerHTML += ":"
+
+            current = current.ability;
+            if(current.funcName.includes("dmg")){
+                abilityP.innerHTML += current.data+"💥 ";
+            }
+            if(current.funcName.includes("shield")){
+                abilityP.innerHTML += current.data+"🛡️ ";
+            }
+            if(current.funcName.includes("heal")){
+                abilityP.innerHTML += current.data+"❤️ ";
+            }
+            if(current.funcName.includes("burn")){
+                abilityP.innerHTML += current.data+"🔥 ";
+            }
+            if(current.funcName.includes("haste")){
+                abilityP.innerHTML += current.data+"⏰ ";
+            }
+            if(current.funcName.includes("slow")){
+                abilityP.innerHTML += current.data+"🐌 ";
+            }
+            if(current.funcName.includes("freeze")){
+                abilityP.innerHTML += current.data+"❄️ ";
             }
         }
         if(!coolExists){
@@ -752,8 +859,8 @@ function addBuffs(){
 // -----------------------------------------------------------------
 
 const ItemLibrary = [
-    new ItemFab("item 3s",1,3,0,[new Ability("dmg",10,null)]),
-    new ItemFab("haste",1,3,0,[new Ability("freeze",10,"me")]),
+    new ItemFab("item 3s"   ,1,2,0, [new Ability("dmg",10,null)],           [new Trigger("dmg",new Ability("haste",10,"me"))]),
+    new ItemFab("freeze"     ,1,3,0, [new Ability("freeze",30,"enemy")],         []),
 ]
 
 const TeamNames =[
@@ -765,10 +872,10 @@ const TeamNames =[
 ]
 
 /* todo:
-    ability listenery
-    jmena pri boji
+    charge
+    vrazit itemy
 
-    postpreludium
+    ----postpreludium
     save
     animace
 */
