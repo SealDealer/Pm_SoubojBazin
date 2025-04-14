@@ -52,10 +52,6 @@ class Item{
                 if(Math.random()*100<this.crit){
                     this.abilities[i].func(match,boardId,pos);
                 }
-
-                //triggery
-                const toTrigger = this.abilities[i].funcName.split(" ")[0];
-                match.checkTriggers(toTrigger);
             }
         }
     }
@@ -201,11 +197,12 @@ class Trigger{
 }
 
 class Ability{
-    func;
+    funcRaw;
     data;
     funcName;
     type;
     target;
+    upgradeType;
     // cool - cooldown
     // above/below/all - on placement
     // start - on battle start
@@ -221,28 +218,36 @@ class Ability{
         }
         switch(newFunc){
             case "dmg":
-                this.func = this.dmg;
+                this.funcRaw = this.dmg;
                 break;
             case "shield":
-                this.func = this.shield;
+                this.funcRaw = this.shield;
             break;
             case "heal":
-                this.func = this.heal;
+                this.funcRaw = this.heal;
             break;
             case "burn":
-                this.func = this.burn;
+                this.funcRaw = this.burn;
             break;
             case "crit":
-                this.func = this.crit;
+                this.funcRaw = this.crit;
             break;
             case "haste":
-                this.func = this.haste;
+                this.funcRaw = this.haste;
             break;
             case "slow":
-                this.func = this.slow;
+                this.funcRaw = this.slow;
             break;
             case "freeze":
-                this.func = this.freeze;
+                this.funcRaw = this.freeze;
+            break;
+            case "upgrade":
+                this.funcRaw = this.upgrade;
+                this.upgradeType = modifier;
+                modifier = "";
+            break;
+            case "charge":
+                this.funcRaw = this.charge;
             break;
         }
         
@@ -288,6 +293,14 @@ class Ability{
                 const randomMe = Math.floor(Math.random()*targetBoardMe.length);
                 return targetBoardMe[randomMe];
         }
+    }
+
+    func(match, boardId, pos){
+        //triggery
+        const toTrigger = this.funcName.split(" ")[0];
+        match.checkTriggers(toTrigger);
+
+        this.funcRaw(match,boardId,pos);
     }
 
     // Abilities-----------------------------------------------------------------
@@ -375,6 +388,33 @@ class Ability{
         let toApply = this.getTarget(match,boardId,pos);
         if(toApply != null){
             toApply.freezeTime += this.data;
+        }
+    }
+
+    upgrade(match, boardId,pos){
+        if(match == null){
+            return;
+        }
+        let toApply = this.getTarget(match,boardId,pos);
+        if( toApply != null){
+
+            for(let i = 0;i<toApply.abilities.length;i++){
+                const currentAbility = toApply.abilities[i];
+                if(currentAbility.funcName.includes(this.upgradeType)){
+                    currentAbility.data += this.data
+                }
+            }
+        }
+
+    }
+
+    charge(match, boardId,pos){
+        if(match == null){
+            return;
+        }
+        let toApply = this.getTarget(match,boardId,pos);
+        if(toApply != null){
+            toApply.TimeSpent += this.data/10;
         }
     }
 
@@ -490,6 +530,12 @@ function addItem(){
     if(fighting){return;}
     let id = document.getElementById("item").value;
     let board = BoardsBuffless[selectedBoard];
+
+    if( id<0 || id>ItemLibrary.length-1){
+        alert("neexistující předmět");
+        return;
+    }
+
     let item = new Item(ItemLibrary[id]);
 
     if(board.size+item.size > board.maxSize){
@@ -524,6 +570,31 @@ function changeBoard(){
     selectedBoard = dropdown.value;
     selected  =-1;
     ShowBoard("table");
+}
+
+function setMaxHp(){
+    const newValue = document.getElementById("MaxHp").value;
+    if(newValue<=0){
+        alert("špatná hodnota max hp");
+        return;
+    }
+    Boards[selectedBoard].maxHP = newValue;
+    Boards[selectedBoard].hp = newValue;
+
+    document.getElementById("MaxHpShow").innerHTML = newValue;
+}
+
+function setBoardSize(){
+
+    const newValue = document.getElementById("BoardSize").value;
+    if(newValue<=0){
+        alert("špatná hodnota max hp");
+        return;
+    }
+    for(let i = 0;i<Boards.length;i++){
+        Boards[i].maxSize = newValue;
+    }
+    document.getElementById("BoardSizeShow").innerHTML = newValue;
 }
 // -----------------------------------------------------------------
 
@@ -593,60 +664,18 @@ function ShowBoard(id){
                 abilityP.innerHTML += "↕+";
             }
 
-
-            if(current.funcName.includes("dmg")){
-                abilityP.innerHTML += current.data+"💥 ";
-            }
-            if(current.funcName.includes("shield")){
-                abilityP.innerHTML += current.data+"🛡️ ";
-            }
-            if(current.funcName.includes("heal")){
-                abilityP.innerHTML += current.data+"❤️ ";
-            }
-            if(current.funcName.includes("burn")){
-                abilityP.innerHTML += current.data+"🔥 ";
-            }
-            if(current.funcName.includes("haste")){
-                abilityP.innerHTML += current.data+"⏰ ";
-            }
-            if(current.funcName.includes("slow")){
-                abilityP.innerHTML += current.data+"🐌 ";
-            }
-            if(current.funcName.includes("freeze")){
-                abilityP.innerHTML += current.data+"❄️ ";
-            }
+            abilityP.innerHTML += current.data+getEmoji(current.funcName)+" ";
         }
 
         for(let j = 0;j<board.Play[i].triggers.length;j++){
             let current = board.Play[i].triggers[j];
-            if(current.event == "dmg"){
-                abilityP.innerHTML += "💥";
-            }
+
+            abilityP.innerHTML += getEmoji(current.event);
 
             abilityP.innerHTML += ":"
 
             current = current.ability;
-            if(current.funcName.includes("dmg")){
-                abilityP.innerHTML += current.data+"💥 ";
-            }
-            if(current.funcName.includes("shield")){
-                abilityP.innerHTML += current.data+"🛡️ ";
-            }
-            if(current.funcName.includes("heal")){
-                abilityP.innerHTML += current.data+"❤️ ";
-            }
-            if(current.funcName.includes("burn")){
-                abilityP.innerHTML += current.data+"🔥 ";
-            }
-            if(current.funcName.includes("haste")){
-                abilityP.innerHTML += current.data+"⏰ ";
-            }
-            if(current.funcName.includes("slow")){
-                abilityP.innerHTML += current.data+"🐌 ";
-            }
-            if(current.funcName.includes("freeze")){
-                abilityP.innerHTML += current.data+"❄️ ";
-            }
+            abilityP.innerHTML += current.data+getEmoji(current.funcName)+" ";
         }
         if(!coolExists){
             progressP.innerHTML = "";
@@ -703,11 +732,14 @@ function ShowFightTable(){
                 cell.innerHTML = "Remíza";
             }
             else{
-                cell.innerHTML = 
-                drawingBoard.hp.toString()+'❤️ '+
-                drawingBoard.shield.toString()+'🛡️ '+
-                drawingBoard.burn.toString()+'🔥<br>'+
-                '<progress value="'+drawingBoard.hp.toString()+'" max="'+drawingBoard.maxHP.toString()+'"></progress>';
+                cell.innerHTML = drawingBoard.hp.toString()+'❤️ ';
+                if(drawingBoard.shield != 0){
+                    cell.innerHTML += drawingBoard.shield.toString()+'🛡️ ';
+                }
+                if(drawingBoard.burn != 0){
+                    cell.innerHTML += drawingBoard.burn.toString()+'🔥 ';
+                }
+                cell.innerHTML+='<br><progress value="'+drawingBoard.hp.toString()+'" max="'+drawingBoard.maxHP.toString()+'"></progress>';
             }
         } 
         
@@ -859,8 +891,8 @@ function addBuffs(){
 // -----------------------------------------------------------------
 
 const ItemLibrary = [
-    new ItemFab("item 3s"   ,1,2,0, [new Ability("dmg",10,null)],           [new Trigger("dmg",new Ability("haste",10,"me"))]),
-    new ItemFab("freeze"     ,1,3,0, [new Ability("freeze",30,"enemy")],         []),
+    new ItemFab("a"   ,1,2,0, [new Ability("charge",10,"++")],           []),
+    new ItemFab("b"     ,1,3,0, [new Ability("dmg",30,null)],         []),
 ]
 
 const TeamNames =[
@@ -871,9 +903,33 @@ const TeamNames =[
     "Zeleni"
 ]
 
+function getEmoji(name){
+    emoji = [
+        ["upgrade","📈"],
+        ["dmg","💥"],
+        ["shield","🛡️"],
+        ["heal","❤️"],
+        ["burn","🔥"],
+        ["haste","⏰"],
+        ["slow","🐌"],
+        ["freeze","❄️"],
+        ["charge","⚡"],
+        ["crit","%💢"],
+    ];
+    let output = "";
+    for(let i = 0;i<emoji.length;i++){
+        if(name.includes(emoji[i][0])){
+            output += emoji[i][1];
+            if(i != 0){
+                return output;
+            }
+        }
+    }
+    return "X";
+}
+
 /* todo:
-    charge
-    vrazit itemy
+    sanatizovat input
 
     ----postpreludium
     save
