@@ -43,14 +43,15 @@ class Item{
         this.TimeSpent += ToAge;
 
         if(this.TimeSpent >= this.time){
-            this.TimeSpent -= this.time;
+            this.TimeSpent -= Math.max(this.time,1);
             for(let i = 0;i<this.abilities.length;i++){
-                if(this.abilities[i].type != "cool"){return;};
+                if(this.abilities[i].type != "cool"){continue;};
                 this.abilities[i].func(match,boardId,pos);
 
                 //crit chance
                 if(Math.random()*100<this.crit){
                     this.abilities[i].func(match,boardId,pos);
+                    match.checkTriggers("crit",boardId);
                 }
             }
         }
@@ -132,9 +133,9 @@ class Match{
         }
     }
 
-    checkTriggers(event){
+    checkTriggers(event,boardId){
         for(let i = 0;i<this.triggers.length;i++){
-            this.triggers[i].check(event);
+            this.triggers[i].check(event,boardId);
         }
     }
 
@@ -183,9 +184,23 @@ class Trigger{
         this.event = event;
     }
 
-    check(event){
-        if(event == this.event){
-            this.ability.func(this.match,this.boardId,this.pos);
+    check(event,boardId){
+        let doesTrigger = false;
+        if(this.event.includes("any")){
+            doesTrigger = true;
+        }
+        if(this.event.includes("not")){
+            if(!this.event.includes(event)){
+                doesTrigger = true;
+            }
+        }
+        else if(this.event.includes(event)){
+            doesTrigger = true;
+        }
+        if(doesTrigger){
+            if(boardId == this.boardId && this.event.includes("me")||(boardId != this.boardId &&this.event.includes("enemy"))){
+                this.ability.func(this.match,this.boardId,this.pos);
+            }
         }
     }
 
@@ -211,10 +226,11 @@ class Ability{
 
         let newFunc = func;
         let modifier = "";
+        const splitfunc = func.split(" ");
 
         if(func.includes(" ")){
-            newFunc = func.split(" ")[0];
-            modifier = func.split(" ")[1];
+            newFunc = splitfunc[0];
+            modifier = splitfunc[splitfunc.length-1];
         }
         switch(newFunc){
             case "dmg":
@@ -243,11 +259,46 @@ class Ability{
             break;
             case "upgrade":
                 this.funcRaw = this.upgrade;
-                this.upgradeType = modifier;
-                modifier = "";
+                this.upgradeType = splitfunc[1];
             break;
             case "charge":
                 this.funcRaw = this.charge;
+            break;
+            case "kamenMudrcu":
+                this.funcRaw = this.kamenMudrcu;
+            break;
+            case "kuse":
+                this.funcRaw = this.kuse;
+            break;
+            case "hydra":
+                this.funcRaw = this.hydra;
+            break;
+            case "kamil":
+                this.funcRaw = this.kamil;
+            break;
+            case "stit":
+                this.funcRaw = this.stit;
+            break;
+            case "carodejnice":
+                this.funcRaw = this.carodejnice;
+            break;
+            case "bazina":
+                this.funcRaw = this.bazina;
+            break;
+            case "vahy":
+                this.funcRaw = this.vahy;
+            break;
+            case "palma":
+                this.funcRaw = this.palma;
+            break;
+            case "vlk":
+                this.funcRaw = this.vlk;
+            break;
+            case "pernik":
+                this.funcRaw = this.pernik;
+            break;
+            case "droslik":
+                this.funcRaw = this.droslik;
             break;
         }
         
@@ -284,23 +335,64 @@ class Ability{
                 return match.Boards[boardId].Play[pos];
 
             case "enemy":
-                const targetBoardEn = match.Boards[1-boardId].Play;
+                const targetBoardEn = this.getCoolItems(match.Boards[1-boardId]);
+                if(targetBoardEn.length == 0){return null;}
                 const randomEn = Math.floor(Math.random()*targetBoardEn.length);
                 return targetBoardEn[randomEn];
-
             case "me":
-                const targetBoardMe = match.Boards[boardId].Play;
+                const targetBoardMe = this.getCoolItems(match.Boards[boardId]);
+                if(targetBoardMe.length == 0){return null;}
                 const randomMe = Math.floor(Math.random()*targetBoardMe.length);
                 return targetBoardMe[randomMe];
+            case "all me":
+                return match.Boards[boardId].Play;
+            case "all":
+                return match.Boards[0].Play.concat(match.Boards[1].Play);
+            case "big cool":
+                const currentBoard = match.Boards[boardId]
+                let output = currentBoard.Play[0];
+                for(let i =1;i<currentBoard.Play.length;i++){
+                    if(currentBoard.Play[i].time>output.time){
+                        output = currentBoard.Play[i];
+                    }
+                }
+                return output;
+            case "shield me":
+                const myBoard = match.Boards[boardId];
+                let outputShield = [];
+                for(let i =1;i<myBoard.Play.length;i++){
+                    const shieldItem = myBoard.Play[i];
+                    for(let j = 0;j<shieldItem.abilities.length;j++){
+                        if(shieldItem.abilities[j].funcName == "shield"){
+                            outputShield.push(shieldItem);
+                            break;
+                        }
+                    }
+                }
+                return outputShield;
         }
     }
 
     func(match, boardId, pos){
         //triggery
         const toTrigger = this.funcName.split(" ")[0];
-        match.checkTriggers(toTrigger);
+        match.checkTriggers(toTrigger,boardId);
 
         this.funcRaw(match,boardId,pos);
+    }
+
+    getCoolItems(board){
+        let output = [];
+        for(let i = 0;i<board.Play.length;i++){
+            const currentItem = board.Play[i];
+            for(let j = 0;j<currentItem.abilities.length;j++){
+                if(currentItem.abilities[j].type == "cool"){
+                    output.push(currentItem);
+                    break;
+                }
+            } 
+        }
+        return output;
     }
 
     // Abilities-----------------------------------------------------------------
@@ -357,7 +449,12 @@ class Ability{
         }
         let toApply = this.getTarget(match,boardId,pos);
         if(toApply != null){
-            toApply.crit += this.data;
+            if(!Array.isArray(toApply)){
+                toApply = [toApply];
+            }
+            for(let j = 0;j<toApply.length;j++){
+                toApply[j].crit += this.data;   
+            }
         }
     }
 
@@ -387,7 +484,12 @@ class Ability{
         }
         let toApply = this.getTarget(match,boardId,pos);
         if(toApply != null){
-            toApply.freezeTime += this.data;
+            if(!Array.isArray(toApply)){
+                toApply = [toApply];
+            }
+            for(let j = 0;j<toApply.length;j++){
+                toApply[j].freezeTime += this.data;   
+            }
         }
     }
 
@@ -396,12 +498,16 @@ class Ability{
             return;
         }
         let toApply = this.getTarget(match,boardId,pos);
-        if( toApply != null){
-
-            for(let i = 0;i<toApply.abilities.length;i++){
-                const currentAbility = toApply.abilities[i];
-                if(currentAbility.funcName.includes(this.upgradeType)){
-                    currentAbility.data += this.data
+        if(toApply != null){
+            if(!Array.isArray(toApply)){
+                toApply = [toApply];
+            }
+            for(let j = 0;j<toApply.length;j++){
+                for(let i = 0;i<toApply[j].abilities.length;i++){
+                    const currentAbility = toApply[j].abilities[i];
+                    if(currentAbility.funcName == this.upgradeType){
+                        currentAbility.data += this.data;
+                    }
                 }
             }
         }
@@ -416,6 +522,134 @@ class Ability{
         if(toApply != null){
             toApply.TimeSpent += this.data/10;
         }
+    }
+
+    kamenMudrcu(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        let toApply = this.getTarget(match,boardId,pos);
+        if(toApply != null){
+            for(let i = 0;i<toApply.abilities.length;i++){
+                const currentAbility = toApply.abilities[i];
+                if(currentAbility.funcName == "dmg"){
+                    this.data = currentAbility.data;
+                    this.heal(match,boardId,pos);
+                }
+            }
+        }
+    }
+
+    kuse(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisItem = match.Boards[boardId].Play[pos];
+        thisItem.time = 10-((thisItem.abilities[0].data-20)*0.1); 
+    }
+
+    hydra(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisBoard = match.Boards[boardId];
+        let twosizes = 0;
+        for(let i = 0;i<thisBoard.Play.length;i++){
+            const currentItem = thisBoard.Play[i];
+            if(currentItem.size == 2){
+                twosizes++;
+            }
+        }
+        const thisItem = thisBoard.Play[pos];
+        thisItem.abilities[1].data = twosizes*this.data;
+
+    }
+
+    kamil(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const enemyBoard = match.Boards[1-boardId];
+        this.data = 2*enemyBoard.burn;
+        this.shield(match,boardId,pos);
+
+    }
+
+    stit(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisBoard = match.Boards[boardId];
+        this.data = thisBoard.shield;
+        this.dmg(match,boardId,pos);
+
+    }
+
+    carodejnice(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisBoard = match.Boards[boardId];
+        this.data = thisBoard.hp/2;
+        this.dmg(match,boardId,pos);
+    }
+
+    bazina(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisBoard = match.Boards[boardId];
+        this.data = thisBoard.hp;
+        this.heal(match,boardId,pos);
+    }
+
+    vahy(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisBoard = match.Boards[boardId];
+        if((thisBoard.Play.length-1)/2 == pos){
+            this.haste(match,boardId,pos);
+        }
+    }
+
+    palma(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const enemyBoard = this.getCoolItems(match.Boards[1-boardId]);
+        if(enemyBoard.length == 0){return;}
+        if(enemyBoard[0].slowTime != 0){
+            this.burn(match,boardId,pos);
+        }
+    }
+
+    vlk(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisBoard = match.Boards[boardId];
+        for(let i = 0;i<thisBoard.Play.length;i++){
+            thisBoard.Play[i].time --;
+        }
+    }
+
+    pernik(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const thisBoard = match.Boards[boardId];
+        this.data = thisBoard.hp;
+        this.shield(match,boardId,pos);
+    }
+
+    droslik(match, boardId, pos){
+        if(match == null){
+            return;
+        }
+        const enemyBoard = match.Boards[1-boardId];
+        this.data = enemyBoard.burn;
+        this.dmg(match,boardId,pos);
     }
 
 }
@@ -521,6 +755,22 @@ function begin(){
             }
         }
     }
+
+    for(let l = 0;l<exampleMatches.length;l++){
+        const currentMatch = exampleMatches[l];
+        for(let m = 0;m<2;m++){
+            const currentBoard = currentMatch.Boards[m];
+            for(let i = 0;i<currentBoard.Play.length;i++){
+                const currentItem =  currentBoard.Play[i];
+                for(let j = 0;j<currentItem.abilities.length;j++){
+                    const currentAbility = currentItem.abilities[j];
+                    if(currentAbility.type == "start"){
+                        currentAbility.func(currentMatch,m,i);
+                    }
+                }
+            }
+        }
+    }
    
 
     ShowFightTable();
@@ -592,7 +842,7 @@ function setBoardSize(){
         return;
     }
     for(let i = 0;i<Boards.length;i++){
-        Boards[i].maxSize = newValue;
+        BoardsBuffless[i].maxSize = newValue;
     }
     document.getElementById("BoardSizeShow").innerHTML = newValue;
 }
@@ -651,7 +901,7 @@ function ShowBoard(id){
         for(let j = 0;j<board.Play[i].abilities.length;j++){
             const current = board.Play[i].abilities[j];
             if(current.type == "cool"){coolExists = true;}
-            if(current.funcName.includes("OnStart")){
+            if(current.funcName.includes("start")){
                 abilityP.innerHTML += "S:";
             }
             if(current.funcName.includes("above")){
@@ -694,6 +944,7 @@ function ShowFightTable(){
     table.innerHTML = '';
     let NameRow = table.insertRow();
     NameRow.insertCell(0);
+    NameRow.classList.add("fightTableRow");
     for(let i = 0;i < TeamNames.length;i++){
         let cell = NameRow.insertCell(i+1);
         cell.innerHTML = TeamNames[i];
@@ -702,11 +953,13 @@ function ShowFightTable(){
 
     for(let i = 0;i<Boards.length;i++){
         let row = table.insertRow();
+        row.classList.add("fightTableRow");
         let nameCell =row.insertCell(0);
         nameCell.innerHTML = TeamNames[i];
 
         for(let j = 0;j<Boards.length;j++){
             let cell = row.insertCell(j+1);
+            cell.classList.add("fightTableCell");
             let drawingBoard;
             let drawingMatch;
             let drawBoardID;
@@ -891,8 +1144,61 @@ function addBuffs(){
 // -----------------------------------------------------------------
 
 const ItemLibrary = [
-    new ItemFab("a"   ,1,2,0, [new Ability("charge",10,"++")],           []),
-    new ItemFab("b"     ,1,3,0, [new Ability("dmg",30,null)],         []),
+    // jmeno, velikost, cooldown, crit, ability, triggery
+    /*0 */new ItemFab("Brusný kámen mudrců",3,5,0,[new Ability("crit start",30,"--"),new Ability("kamenMudrcu",1,"--")],[]),
+    /*1 */new ItemFab("Poloautomatická kuše",2,21,0,[new Ability("dmg",20,null),new Ability("kuse start",0,null),new Ability("kuse",0,null)],[]),
+    /*2 */new ItemFab("Balvan",3,20,0,[new Ability("dmg",1000,null)],[]),
+    /*3 */new ItemFab("Katapult",3,8,0,[new Ability("dmg",50,null)],[new Trigger("dmg me",new Ability("charge",20,"this"))]),
+    /*4 */new ItemFab("Dvouhlavá hydra",2,1,0,[new Ability("hydra start",10,null),new Ability("upgrade dmg start",0,"all me")],[]),
+    /*5 */new ItemFab("Stokrát nic",2,1,0,[new Ability("dmg",0,null)],[]),
+    /*6 */new ItemFab("Kamil ze sirotčince",1,3,0,[new Ability("kamil",0,null)],[]),
+    /*7 */new ItemFab("Zápalky",1,6,0,[new Ability("burn",4,null)],[new Trigger("not dmg charge me",new Ability("charge",10,"this"))]),
+    /*8 */new ItemFab("Blaf z jídelny",1,1,0,[],[new Trigger("burn me",new Ability("slow",10,"enemy"))]),
+    /*9 */new ItemFab("Růžena Šípková",1,1,0,[],[new Trigger("slow me",new Ability("dmg",25,null))]),
+    /*10*/new ItemFab("Zanedbaný vchod",2,1,0,[],[new Trigger("any enemy",new Ability("slow",10,null))]),
+    /*11*/new ItemFab("Doběla nažhavený šnek",3,7,0,[new Ability("burn",10,null)],[new Trigger("slow me",new Ability("charge",20,null))]),
+    /*12*/new ItemFab("Nebezpečně nabroušený štít",1,5,0,[new Ability("stit",0,null)],[]),
+    /*13*/new ItemFab("Perníček",2,7,0,[new Ability("shield",10,null)],[new Trigger("shield me",new Ability("upgrade shield cool",5,"this"))]),
+    /*14*/new ItemFab("Prášek na tvrdnutí hlavy",3,2,0,[new Ability("upgrade shield cool",5,"all me")],[]),
+    /*15*/new ItemFab("Palice na čarodějnice",3,12,0,[new Ability("carodejnice",0,null)],[]),
+    /*16*/new ItemFab("Záložní bažina",3,10,0,[new Ability("bazina",0,null)],[]),
+    /*17*/new ItemFab("Vyvážený jídelníček",2,1,0,[],[new Trigger("dmg enemy",new Ability("heal",10,null))]),
+    /*18*/new ItemFab("Ledové království",3,1,0,[],[new Trigger("any enemy",new Ability("freeze",5,"enemy"))]),
+    /*19*/new ItemFab("Mezibojové hry",2,7,0,[new Ability("freeze",30,"all")],[]),
+    /*20*/new ItemFab("Zatykač",1,1,0,[new Ability("freeze start",1000,"enemy")],[]),
+    /*21*/new ItemFab("Vavřínová postel",3,1,0,[],[]),
+    /*22*/new ItemFab("Alkanový lektvar",2,8,0,[new Ability("burn",5,null),new Ability("burn all",3,null)],[]),
+    /*23*/new ItemFab("Cementové náplasti",2,6,0,[new Ability("heal",20,null)],[new Trigger("heal me",new Ability("upgrade shield cool",5,"--"))]),
+    /*24*/new ItemFab("Tekutá kuráž",1,1,0,[],[new Trigger("dmg me",new Ability("charge",5,"big cool"))]),
+    /*25*/new ItemFab("Božské mlýny",2,1,0,[],[new Trigger("slow me",new Ability("crit",10,"me")),new Trigger("freeze me",new Ability("crit",10,"me"))]),
+    /*26*/new ItemFab("Kocourovy kritické kroksy",2,4,0,[new Ability("crit",5,"this")],[new Trigger("crit me", new Ability("charge",20,"me"))]),
+    /*27*/new ItemFab("Crepe de feu",1,7,0,[new Ability("heal",30,null),new Ability("burn",4,null)],[]),
+    /*28*/new ItemFab("Kouzelný francouzák",2,5,0,[new Ability("upgrade dmg shield heal cool",10,"me")],[]),
+    /*29*/new ItemFab("Kilo cukru",1,3,0,[new Ability("haste",10,"--")],[]),
+    /*30*/new ItemFab("Nažhavené zbraně",3,1,0,[],[new Trigger("crit me", new Ability("burn",15,null))]),
+    /*31*/new ItemFab("Blizard v lahvi",1,7,0,[new Ability("freeze",20,"enemy")],[new Trigger("freeze me", new Ability("dmg",30,null))]),
+    /*32*/new ItemFab("Pila na kosti",1,5,0,[new Ability("haste",20,"me")],[new Trigger("heal me", new Ability("charge",10,"this"))]),
+    /*33*/new ItemFab("Iglú",1,4,0,[new Ability("shield",15,null),new Ability("freeze",10,null)],[]),
+    /*34*/new ItemFab("Seminář vyhýbání",2,1,0,[],[new Trigger("slow me", new Ability("shield",20,null))]),
+    /*35*/new ItemFab("Prokleté váhy",2,4,0,[new Ability("vahy",20,"++"),new Ability("vahy",20,"--")],[]),
+    /*36*/new ItemFab("Komicky velké hledí",1,1,0,[new Ability("dmg above",-10,null),new Ability("crit start",30,"--")],[]),
+    /*37*/new ItemFab("Útok na palmu",2,6,0,[new Ability("slow",10,"enemy"),new Ability("palma",50,null)],[]),
+    /*38*/new ItemFab("Zlatý marvin",3,7,0,[new Ability("upgrade dmg heal shield cool",20,"++"),new Ability("upgrade dmg heal shield cool",20,"--")],[]),
+    /*39*/new ItemFab("Motivační vlk euroasijský",3,1,0,[new Ability("vlk start",1,null)],[]),
+    /*40*/new ItemFab("FVM-DT",1,1,0,[],[new Trigger("haste me",new Ability("shield",10,null)),new Trigger("charge me",new Ability("shield",10,null))]),
+    /*41*/new ItemFab("Vajíčka do malty",2,1,0,[new Ability("crit start",20,"shield me")],[]),
+    /*42*/new ItemFab("Perníkové stavební materiály",3,13,0,[new Ability("pernik",0,null)],[]),
+    /*43*/new ItemFab("Meč v kameni",2,7,0,[new Ability("dmg",10,null), new Ability("upgrade dmg cool",10,"all me")],[]),
+    /*44*/new ItemFab("Sítě s viry",1,4,0,[new Ability("dmg",5,null),new Ability("slow",10,"enemy")],[]),
+    /*45*/new ItemFab("Moc malý střevíček",1,5,0,[new Ability("dmg",5,null),new Ability("heal",30,null)],[]),
+    /*46*/new ItemFab("Doslíci",2,2,0,[new Ability("droslik",0,null)],[]),
+    /*47*/new ItemFab("Kolemjdoucí rolník",1,5,0,[new Ability("dmg",5,null),new Ability("burn",3,null)],[]),
+    /*48*/new ItemFab("Srdce ledového obra",1,1,0,[new Ability("upgrade freeze start",10,"all me")],[]),
+    /*49*/new ItemFab("Hyperhypotermie",3,1,0,[],[new Trigger("burn me",new Ability("freeze",5,"enemy"))]),
+    /*50*/new ItemFab("Proklatě těžká úloha",2,7,0,[new Ability("slow",20,"enemy"),new Ability("slow",20,"enemy"),new Ability("slow",20,"enemy")],[]),
+    /*51*/new ItemFab("Pinokio",1,4,0,[new Ability("dmg",5,null),new Ability("shield",10,null)],[]),
+    /*52*/new ItemFab("Táborák",1,3,0,[new Ability("burn",3,null)],[]),
+    /*53*/new ItemFab("2048-lístek",1,1,0,[new Ability("crit start",15,"all me")],[]),
 ]
 
 const TeamNames =[
@@ -905,6 +1211,7 @@ const TeamNames =[
 
 function getEmoji(name){
     emoji = [
+        ["not","🚫"],
         ["upgrade","📈"],
         ["dmg","💥"],
         ["shield","🛡️"],
@@ -915,6 +1222,18 @@ function getEmoji(name){
         ["freeze","❄️"],
         ["charge","⚡"],
         ["crit","%💢"],
+        ["kamenMudrcu","❤️"],
+        ["kuse","🏹"],
+        ["hydra","🐍"],
+        ["kamil","🕺"],
+        ["stit","💥"],
+        ["carodejnice","💥"],
+        ["bazina","❤️"],
+        ["vahy","⏰"],
+        ["palma","🔥"],
+        ["vlk","🐺"],
+        ["pernik","🛡️"],
+        ["droslik","💥"],
     ];
     let output = "";
     for(let i = 0;i<emoji.length;i++){
@@ -929,9 +1248,8 @@ function getEmoji(name){
 }
 
 /* todo:
-    sanatizovat input
-
+    schedule
     ----postpreludium
-    save
+    save?
     animace
 */

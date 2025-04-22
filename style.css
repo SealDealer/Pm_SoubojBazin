@@ -3,45 +3,54 @@
 }
 
 td{
-text-align: center;
-border: 2px solid black;
+    text-align: center;
+    border: 2px solid black;
 }
 
 #GameTable{
-    background-color: burlywood;
-    height: 270px;
-    width: 300px;
+    background-color: rgb(196, 145, 91);
+    height: 550px;
+    width: 20%;
 }
 
 table{
-    width: 300px;
+    width: 500px;
     flex: auto;
 }
 
+.fightTableCell{
+    width: 16.67%;
+}
+
+.fightTableRow
+{
+    /*height: 16.67%;*/
+    height: 50px;
+}
 #fightTable{
-    border: 1px solid black;
-    width: 100%;
+    width: 1000px;
+    height: 300px;
     display: none;
 }
 
 #ExampleTables{
-    background-color: burlywood;
-    height: 270px;
+    background-color: rgb(196, 145, 91);
+    height: 550px;
     width: auto;
     display: none;
 }
 
 .size1{
-    background-color: #9fe3b1;
+    background-color: #c9e9d2;
     height: 50px;
 }
 
 .size2{
-    background-color: #e3d29f;
+    background-color: #e7e0cb;
     height: 100px;
 }
 
 .size3{
-    background-color: #e39f9f;
+    background-color: #f7d8d8;
     height: 150px;
 }
