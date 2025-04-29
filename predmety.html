@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="cs-cz">
+<head>
+    <meta charset="UTF-8">
+    <title>Preview</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+      table#itemTable td { text-align: left }
+    </style>
+</head>
+<body id="bodyElement">
+    <table id='itemTable'></table>
+    <pre id='itemList'></pre>
+    <script src="script.js"></script>
+
+    <script>
+    function m(id) {
+        return id.replaceAll(' ','_')
+    }
+    function print_ability(abi) {
+         const upgrade_type = abi.upgrade_type ? `,${abi.upgrade_type}` : ''
+         const target = abi.target ? `>${m(abi.target)}` : ''
+         return `${abi.type}.${m(abi.funcName)}(${abi.data}${upgrade_type})${target}`
+    }
+    function print_trigger(tri) {
+      return `${m(tri.event)}=>${print_ability(tri.ability)}`
+    }
+    function array2csv(arr) {
+        return arr.map( (row) => {
+          return row.map( (item) => {
+            return item
+          }).join(';')
+        }).join("\n")
+    }
+    function array2table(arr) {
+      var table =''
+      arr.forEach(row => {
+        table += '<tr>';
+        row.forEach(cell => {
+          table += `<td>${cell}</td>`;
+        });
+        table += '</tr>';
+      });
+      return table;
+    }
+      
+    var fab_items = [
+      ['id','name','size','time','crit','abilities','triggers']
+    ]
+
+    ItemLibrary.forEach( (elem, id) => {
+        const ability = elem.abilities.map( (abi) => {
+          return print_ability(abi)
+        }).join(' ')
+        const triger = elem.triggers.map( (tri) => {
+          return print_trigger(tri)
+        }).join(',')
+
+        fab_items.push([id, elem.name, elem.size, elem.time, elem.crit,ability, triger])
+    })
+
+    document.getElementById('itemList').innerHTML = array2csv(fab_items)
+    document.getElementById('itemTable').innerHTML = array2table(fab_items)
+
+    </script>
+</body>
+</html>
