@@ -7,39 +7,57 @@
 </head>
 <body id="bodyElement">
     <div class="Controls">
-        <button id="begin" onclick="begin()">Begin</button>
-        <br><br>
+        Max HP:<div id="MaxHpShow" style="display: inline;">100</div><br>
+        <input type="number" id="MaxHp"><button id="MaxHpConfirm" onclick="setMaxHp()">Set</button><br>
+        Board size: <div id="BoardSizeShow" style="display: inline;">5</div><br>
+        <input type="number" id="BoardSize"><button id="BoardSizeConfirm" onclick="setBoardSize()">Set</button>
+      <br><br>
         <label for="teams">Tým:</label>
 
       <select name="teams" id="teams" onchange="changeBoard()">
         <option value=0>Zluti</option>
         <option value=1>Modri</option>
         <option value=2>Ruzovi</option>
-        <option value=3>Zeleni</option>
-        <option value=4>Oranzovi</option>
+        <option value=3>Oranzovi</option>
+        <option value=4>Zeleni</option>
       </select>
-      <br>
-      <p>
-        Max HP: <div id="MaxHpShow">100</div><input type="number" id="MaxHp"><button id="MaxHpConfirm" onclick="setMaxHp()">Set</button></p><p>
-        Board size: <div id="BoardSizeShow">5</div><input type="number" id="BoardSize"><button id="BoardSizeConfirm" onclick="setBoardSize()">Set</button>
-      </p>
       <br><br>
         <input type="number" id="item"><br>
         <button id="add" onclick="addItem()">Add</button>
         <button id="upArrow" onclick="pushUp()">↑</button>
         <button id="downArrow" onclick="pushDown()">↓</button>
         <button id="delete" onclick="deleteItem()">del</button>
+        <br>
+        <button id="begin" onclick="begin()">Begin</button> 
+        <input type="checkbox" id="fightLoop" name="fightLoop" onchange="changeChecked()">
+        <label for="fightLoop">loop</label>
+
      </div>  
       <br><br>
       <div id="GameTable">
         <table id="table"></table>
       </div>
       <div id="ExampleTables">
-        <table id="p0"></table> 
-        <table id="p1"></table> 
-        <table id="p2"></table> 
-        <table id="p3"></table> 
-        <table id="p4"></table> 
+        <table class="Example" id="p0"></table> 
+        <table class="Example" id="p1"></table> 
+        <table class="Example" id="p2"></table> 
+        <table class="Example" id="p3"></table> 
+        <table class="Example" id="p4"></table> 
+        <table class="Example" id="p5"></table> 
+        <table class="Example" id="p6"></table> 
+        <table class="Example" id="p7"></table> 
+        <table class="Example" id="p8"></table> 
+        <table class="Example" id="p9"></table> 
+        <table class="Example" id="p10"></table> 
+        <table class="Example" id="p11"></table> 
+        <table class="Example" id="p12"></table> 
+        <table class="Example" id="p13"></table> 
+        <table class="Example" id="p14"></table> 
+        <table class="Example" id="p15"></table> 
+        <table class="Example" id="p16"></table> 
+        <table class="Example" id="p17"></table> 
+        <table class="Example" id="p18"></table> 
+        <table class="Example" id="p19"></table> 
       </div>
       <p id="sandCounter"></p>
       <table id="fightTable">

@@ -49,7 +49,7 @@ class Item{
                 this.abilities[i].func(match,boardId,pos);
 
                 //crit chance
-                if(Math.random()*100<this.crit){
+                if(random()*100<this.crit){
                     this.abilities[i].func(match,boardId,pos);
                     match.checkTriggers("crit",boardId);
                 }
@@ -337,12 +337,12 @@ class Ability{
             case "enemy":
                 const targetBoardEn = this.getCoolItems(match.Boards[1-boardId]);
                 if(targetBoardEn.length == 0){return null;}
-                const randomEn = Math.floor(Math.random()*targetBoardEn.length);
+                const randomEn = Math.floor(random()*targetBoardEn.length);
                 return targetBoardEn[randomEn];
             case "me":
                 const targetBoardMe = this.getCoolItems(match.Boards[boardId]);
                 if(targetBoardMe.length == 0){return null;}
-                const randomMe = Math.floor(Math.random()*targetBoardMe.length);
+                const randomMe = Math.floor(random()*targetBoardMe.length);
                 return targetBoardMe[randomMe];
             case "all me":
                 return match.Boards[boardId].Play;
@@ -664,9 +664,12 @@ let matches = [];
 let fighting = false;
 let exampleMatches = new Array(5);
 let interval;
+let loop =false;
 const timeIncrement = .1;
 const sandstormTime = 30;
 let fightTime = 0;
+let seed = 1;
+
 
 
 
@@ -682,7 +685,7 @@ function pushUp(){
     selected--;
     board.Play.splice(selected,0,item);
     addBuffs();
-    ShowBoard("table");
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
 }
 
 function pushDown(){
@@ -696,7 +699,7 @@ function pushDown(){
     selected++;
     board.Play.splice(selected,0,item);
     addBuffs();
-    ShowBoard("table");
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
 }
 
 function deleteItem(){
@@ -710,13 +713,12 @@ function deleteItem(){
     board.Play.splice(selected,1);
     selected = -1;
     addBuffs();
-    ShowBoard("table");
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
 }
 
 function begin(){
     document.getElementById("GameTable").style.display = "none";
-    document.getElementById("ExampleTables").style.display = "flex";
-    document.getElementById("fightTable").style.display = "inline-block";
+    document.getElementById("ExampleTables").style.display = "grid";
     fightTime = 0;
     if(fighting){return;}
     interval = setInterval(UpdateItems,1000*timeIncrement);
@@ -730,11 +732,8 @@ function begin(){
         }
         matches.push(row);
     }
-    let dummy = new Board();
-    dummy.hp = Number.MAX_SAFE_INTEGER;
-    for(let i =0;i<5;i++){
-        exampleMatches[i] = new Match(Boards[i],dummy,i,null);
-    }
+
+    seed = matches[4][0].Boards[0].maxHP;
 
     //trigger start events
     for(let k = 0;k<matches.length;k++){
@@ -755,24 +754,6 @@ function begin(){
             }
         }
     }
-
-    for(let l = 0;l<exampleMatches.length;l++){
-        const currentMatch = exampleMatches[l];
-        for(let m = 0;m<2;m++){
-            const currentBoard = currentMatch.Boards[m];
-            for(let i = 0;i<currentBoard.Play.length;i++){
-                const currentItem =  currentBoard.Play[i];
-                for(let j = 0;j<currentItem.abilities.length;j++){
-                    const currentAbility = currentItem.abilities[j];
-                    if(currentAbility.type == "start"){
-                        currentAbility.func(currentMatch,m,i);
-                    }
-                }
-            }
-        }
-    }
-   
-
     ShowFightTable();
 }
 
@@ -800,7 +781,7 @@ function addItem(){
         selected++;
     }
     addBuffs();
-    ShowBoard("table");
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
 }
 
 function click(index){
@@ -811,7 +792,7 @@ function click(index){
     else{
         selected = index;
     }
-    ShowBoard("table");
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
 }
 
 function changeBoard(){
@@ -819,7 +800,8 @@ function changeBoard(){
     let dropdown = document.getElementById("teams");
     selectedBoard = dropdown.value;
     selected  =-1;
-    ShowBoard("table");
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
+    document.getElementById("MaxHpShow").innerHTML = Boards[selectedBoard].maxHP;
 }
 
 function setMaxHp(){
@@ -832,13 +814,14 @@ function setMaxHp(){
     Boards[selectedBoard].hp = newValue;
 
     document.getElementById("MaxHpShow").innerHTML = newValue;
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
 }
 
 function setBoardSize(){
 
     const newValue = document.getElementById("BoardSize").value;
     if(newValue<=0){
-        alert("špatná hodnota max hp");
+        alert("špatná hodnota velikosti desky");
         return;
     }
     for(let i = 0;i<Boards.length;i++){
@@ -846,89 +829,110 @@ function setBoardSize(){
     }
     document.getElementById("BoardSizeShow").innerHTML = newValue;
 }
+
+function changeChecked(){
+    loop = !loop;
+}
 // -----------------------------------------------------------------
 
 
 // General functions -----------------------------------------------
-function ShowBoard(id){
+function ShowBoard(id,board,flipped, color){
     let table = document.getElementById(id);
     table.innerHTML = '';
-    let board = Boards[selectedBoard];
-    if(fighting){
-        let boardId = parseInt(id[1]);
-        board = exampleMatches[boardId].Boards[0];
-        
-        let header = table.insertRow();
-        header.insertCell(0);
-        let nameCell = header.insertCell(1);
-        header.insertCell(2);
-
-        nameCell.innerHTML = TeamNames[boardId];
-        
+    let bigRow = table.insertRow();
+    let innerCell;
+    let hpCell;
+    if(flipped){
+        hpCell = bigRow.insertCell(0);
+        innerCell = bigRow.insertCell(1);
     }
+    else{
+        innerCell = bigRow.insertCell(0);
+        hpCell = bigRow.insertCell(1);
+    }
+    innerCell.classList.add("innerCell");
+    hpCell.classList.add("hpCell");
+
+    const percentageHp = 100*(board.hp/board.maxHP);
+    let percentageShield = 100*(board.shield/board.maxHP);
+    if(percentageShield+percentageHp > 100){
+        percentageShield = 100-percentageHp;
+    }
+    hpCell.style.backgroundImage = "linear-gradient(to top,green "+ percentageHp+"%, yellow "+percentageHp+"%,yellow "+percentageShield+percentageHp+"%,white "+percentageShield+percentageHp+"%,white)";
+
+    hpCell.innerHTML = "";
+    if(board.burn != 0){
+        hpCell.innerHTML += board.burn.toString()+'🔥 <br>';
+    }
+    if(board.shield != 0){
+        hpCell.innerHTML += board.shield.toString()+'🛡️ <br>';
+    }
+    hpCell.innerHTML += board.hp.toString()+'❤️ ';
+
+    let innerTable = document.createElement("table");
+    innerCell.style.backgroundColor = color;
+    innerCell.append(innerTable);
+    innerTable.classList.add("innerTable");
+
     for(let i = 0;i<board.Play.length;i++){
-        let row = table.insertRow();
-        let nameP =  row.insertCell(0);
-        let progressP =  row.insertCell(1);
-        let abilityP = row.insertCell(2);
+        let row = innerTable.insertRow();
+        let currentCell =  row.insertCell(0);
+
+        const progressPercentage = (board.Play[i].TimeSpent/board.Play[i].time)*100;
+
+        row.style.backgroundImage = "linear-gradient(to right,rgba(0, 0, 0,0.2) "+ progressPercentage+"%, transparent "+progressPercentage+"%)";
 
         if(selected == i){
             row.id = "selected";
         }
         
         row.classList.add("size"+board.Play[i].size);
-        nameP.innerHTML  = board.Play[i].name;
-
-        progressP.innerHTML = ""
-        progressP.innerHTML += '<progress id="prog'+i.toString()+'" value="'+board.Play[i].TimeSpent.toString()+'" max="'+board.Play[i].time.toString()+'"></progress>'+"<br>";
+        currentCell.innerHTML  = board.Play[i].name + "<br>";
 
         if(board.Play[i].crit != 0){
-            progressP.innerHTML += board.Play[i].crit + "%💢 ";
+            currentCell.innerHTML += board.Play[i].crit + "%💢 ";
         }
         if(board.Play[i].hasteTime != 0){
-            progressP.innerHTML += board.Play[i].hasteTime +"⏰ ";
+            currentCell.innerHTML += board.Play[i].hasteTime +"⏰ ";
         }
         if(board.Play[i].slowTime != 0){
-            progressP.innerHTML += board.Play[i].slowTime + "🐌 ";
+            currentCell.innerHTML += board.Play[i].slowTime + "🐌 ";
         }
         if(board.Play[i].freezeTime != 0){
-            progressP.innerHTML += board.Play[i].freezeTime + "❄️ ";
+            currentCell.innerHTML += board.Play[i].freezeTime + "❄️ ";
         }
 
-
-        abilityP.innerHTML = "";
+        currentCell.innerHTML+= "<br>"
         let coolExists = false;
         for(let j = 0;j<board.Play[i].abilities.length;j++){
             const current = board.Play[i].abilities[j];
             if(current.type == "cool"){coolExists = true;}
             if(current.funcName.includes("start")){
-                abilityP.innerHTML += "S:";
+                currentCell.innerHTML += "S:";
             }
             if(current.funcName.includes("above")){
-                abilityP.innerHTML += "↑+";
+                currentCell.innerHTML += "↑+";
             }
             if(current.funcName.includes("below")){
-                abilityP.innerHTML += "↓+";
+                currentCell.innerHTML += "↓+";
             }
             if(current.funcName.includes("all")){
-                abilityP.innerHTML += "↕+";
+                currentCell.innerHTML += "↕+";
             }
 
-            abilityP.innerHTML += current.data+getEmoji(current.funcName)+" ";
+            currentCell.innerHTML += current.data+getEmoji(current.funcName)+" ";
         }
 
         for(let j = 0;j<board.Play[i].triggers.length;j++){
             let current = board.Play[i].triggers[j];
 
-            abilityP.innerHTML += getEmoji(current.event);
+            currentCell.innerHTML += getEmoji(current.event);
 
-            abilityP.innerHTML += ":"
+            currentCell.innerHTML += ":"
 
             current = current.ability;
-            abilityP.innerHTML += current.data+getEmoji(current.funcName)+" ";
-        }
-        if(!coolExists){
-            progressP.innerHTML = "";
+            currentCell.innerHTML += current.data+getEmoji(current.funcName)+" ";
         }
         
     }
@@ -945,63 +949,19 @@ function ShowFightTable(){
     let NameRow = table.insertRow();
     NameRow.insertCell(0);
     NameRow.classList.add("fightTableRow");
-    for(let i = 0;i < TeamNames.length;i++){
-        let cell = NameRow.insertCell(i+1);
-        cell.innerHTML = TeamNames[i];
-    }
-    
 
-    for(let i = 0;i<Boards.length;i++){
-        let row = table.insertRow();
-        row.classList.add("fightTableRow");
-        let nameCell =row.insertCell(0);
-        nameCell.innerHTML = TeamNames[i];
-
-        for(let j = 0;j<Boards.length;j++){
-            let cell = row.insertCell(j+1);
-            cell.classList.add("fightTableCell");
-            let drawingBoard;
-            let drawingMatch;
-            let drawBoardID;
-            if(i>j){
-                drawingMatch = matches[i][j];
-                drawBoardID = 0;
+    let counter = 0;
+    for(let i = 0;i<matches.length;i++){
+        const currentMatchRow = matches[i];
+        for(let j =0;j<currentMatchRow.length;j++){
+            const currentMatch = currentMatchRow[j];
+            for(let k = 0;k<2;k++){
+                const currentBoard = currentMatch.Boards[k];
+                const tableID = "p" + counter.toString();
+                counter++;
+                ShowBoard(tableID,currentBoard,k==1,TeamColors[currentMatch.players[k]]);
             }
-            else if(j>i){
-                drawingMatch = matches[j][i];
-                drawBoardID = 1;
-            }
-            else{
-                //tries to fight with itself
-                continue;
-            }
-            drawingBoard = drawingMatch.Boards[drawBoardID];
-            if(drawingMatch.winner == drawBoardID){
-                cell.innerHTML = "Výhra!";    
-            }else if(drawingMatch.winner == 1-drawBoardID){
-                cell.innerHTML = "Prohra";
-            }
-            else if(drawingMatch.winner == 3){
-                cell.innerHTML = "Remíza";
-            }
-            else{
-                cell.innerHTML = drawingBoard.hp.toString()+'❤️ ';
-                if(drawingBoard.shield != 0){
-                    cell.innerHTML += drawingBoard.shield.toString()+'🛡️ ';
-                }
-                if(drawingBoard.burn != 0){
-                    cell.innerHTML += drawingBoard.burn.toString()+'🔥 ';
-                }
-                cell.innerHTML+='<br><progress value="'+drawingBoard.hp.toString()+'" max="'+drawingBoard.maxHP.toString()+'"></progress>';
-            }
-        } 
-        
-        for(let i =0;i<exampleMatches.length;i++){
-            const tableID = "p" + i.toString();
-            ShowBoard(tableID);
         }
-
-        document.getElementById("table").innerHTML = "";
     }
 }
 
@@ -1015,10 +975,6 @@ function UpdateItems(){
        for(let j = 0;j<matches[i].length;j++){
             matches[i][j].age();
        }
-   }
-
-   for(let i =0;i<exampleMatches.length;i++){
-        exampleMatches[i].age();        
    }
    ShowFightTable();
 
@@ -1071,7 +1027,6 @@ function resetFight(){
     clearInterval(interval);
     document.getElementById("GameTable").style.display = "inline-block";
     document.getElementById("ExampleTables").style.display = "none";
-    document.getElementById("fightTable").style.display = "none";
     document.getElementById("sandCounter").innerHTML = "";
     fighting = false;
     let points = [0,0,0,0,0];
@@ -1093,8 +1048,14 @@ function resetFight(){
         toShow += TeamNames[i] + ": "+ points[i].toString()+"\n";
     }
     selectedBoard = 0;
-    ShowBoard("table");
-    alert(toShow);
+    ShowBoard("table",Boards[selectedBoard],false,TeamColors[selectedBoard]);
+
+    if(loop){
+        begin();
+    } 
+    else{
+        alert(toShow);
+    }
 }
 
 function addBuffs(){
@@ -1141,15 +1102,24 @@ function addBuffs(){
         }
 }
 
+function random(){
+    const M = 1000;
+    const A = 809;
+
+    const output = (seed*A)%M;
+    seed = output;
+    return output/1000;
+}
+
 // -----------------------------------------------------------------
 
 const ItemLibrary = [
     // jmeno, velikost, cooldown, crit, ability, triggery
-    /*0 */new ItemFab("Brusný kámen mudrců",3,5,0,[new Ability("crit start",30,"--"),new Ability("kamenMudrcu",1,"--")],[]),
+    /*0 */new ItemFab("Brusný kámen mudrců",3,5,0,[new Ability("crit start",30,"--"),new Ability("kamenMudrcu",0,"--")],[]),
     /*1 */new ItemFab("Poloautomatická kuše",2,21,0,[new Ability("dmg",20,null),new Ability("kuse start",0,null),new Ability("kuse",0,null)],[]),
     /*2 */new ItemFab("Balvan",3,20,0,[new Ability("dmg",1000,null)],[]),
     /*3 */new ItemFab("Katapult",3,8,0,[new Ability("dmg",50,null)],[new Trigger("dmg me",new Ability("charge",20,"this"))]),
-    /*4 */new ItemFab("Dvouhlavá hydra",2,1,0,[new Ability("hydra start",10,null),new Ability("upgrade dmg start",0,"all me")],[]),
+    /*4 */new ItemFab("Dvouhlavá hydra",2,1,0,[new Ability("hydra start",15,null),new Ability("upgrade dmg start",0,"all me")],[]),
     /*5 */new ItemFab("Stokrát nic",2,1,0,[new Ability("dmg",0,null)],[]),
     /*6 */new ItemFab("Kamil ze sirotčince",1,3,0,[new Ability("kamil",0,null)],[]),
     /*7 */new ItemFab("Zápalky",1,6,0,[new Ability("burn",4,null)],[new Trigger("not dmg charge me",new Ability("charge",10,"this"))]),
@@ -1157,7 +1127,7 @@ const ItemLibrary = [
     /*9 */new ItemFab("Růžena Šípková",1,1,0,[],[new Trigger("slow me",new Ability("dmg",25,null))]),
     /*10*/new ItemFab("Zanedbaný vchod",2,1,0,[],[new Trigger("any enemy",new Ability("slow",10,null))]),
     /*11*/new ItemFab("Doběla nažhavený šnek",3,7,0,[new Ability("burn",10,null)],[new Trigger("slow me",new Ability("charge",20,null))]),
-    /*12*/new ItemFab("Nebezpečně nabroušený štít",1,5,0,[new Ability("stit",0,null)],[]),
+    /*12*/new ItemFab("Nebezpečně nabroušený štít",2,5,0,[new Ability("stit",0,null)],[]),
     /*13*/new ItemFab("Perníček",2,7,0,[new Ability("shield",10,null)],[new Trigger("shield me",new Ability("upgrade shield cool",5,"this"))]),
     /*14*/new ItemFab("Prášek na tvrdnutí hlavy",3,2,0,[new Ability("upgrade shield cool",5,"all me")],[]),
     /*15*/new ItemFab("Palice na čarodějnice",3,12,0,[new Ability("carodejnice",0,null)],[]),
@@ -1191,7 +1161,7 @@ const ItemLibrary = [
     /*43*/new ItemFab("Meč v kameni",2,7,0,[new Ability("dmg",10,null), new Ability("upgrade dmg cool",10,"all me")],[]),
     /*44*/new ItemFab("Sítě s viry",1,4,0,[new Ability("dmg",5,null),new Ability("slow",10,"enemy")],[]),
     /*45*/new ItemFab("Moc malý střevíček",1,5,0,[new Ability("dmg",5,null),new Ability("heal",30,null)],[]),
-    /*46*/new ItemFab("Doslíci",2,2,0,[new Ability("droslik",0,null)],[]),
+    /*46*/new ItemFab("Droslíci",2,2,0,[new Ability("droslik",0,null)],[]),
     /*47*/new ItemFab("Kolemjdoucí rolník",1,5,0,[new Ability("dmg",5,null),new Ability("burn",3,null)],[]),
     /*48*/new ItemFab("Srdce ledového obra",1,1,0,[new Ability("upgrade freeze start",10,"all me")],[]),
     /*49*/new ItemFab("Hyperhypotermie",3,1,0,[],[new Trigger("burn me",new Ability("freeze",5,"enemy"))]),
@@ -1207,6 +1177,14 @@ const TeamNames =[
     "Ruzovi",
     "Oranzovi",
     "Zeleni"
+]
+
+const TeamColors =[
+    "#e0de94",
+    "#949ee0",
+    "#da94e0",
+    "#e0b094",
+    "#94e0a7"
 ]
 
 function getEmoji(name){
@@ -1248,8 +1226,19 @@ function getEmoji(name){
 }
 
 /* todo:
-    schedule
-    ----postpreludium
-    save?
-    animace
+    hydra bug
+    testnout všechny matche
+
+    Vitas: item tabulka z arraye
+
+    ----planovaci
+    basic itemy
+    HP rework
+    klátra card builder
+
+    ---nulaprace
+    nabídka další den
+    nabídka size 9
+    každý má ban
+    fix income
 */
