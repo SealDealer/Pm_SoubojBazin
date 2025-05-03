@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="style.css">
     <style>
       table#itemTable td { text-align: left }
+      table#itemTable { width: 100%  }
     </style>
 </head>
 <body id="bodyElement">
@@ -14,6 +15,69 @@
     <script src="script.js"></script>
 
     <script>
+    var descriptions = [
+"Vyleč tolik, kolik má předmět nad tímto dmg,Předmět nad tímto má +30% kritickou šanci",
+"20dmg; za každý další dmg, který tato zbraň způsobuje sniž čas o 0.1s",
+"1000dmg",
+"Pokaždé, když zaútočíš se zbraní nabij toto 2s, způsob 50 dmg",
+"Každá tvá zbraň pod tímto dostane 25 dmg navíc za každý předmět, který má velikost 2",
+"0dmg",
+"Získej 2x tolik štítu, kolik má nepřítel ohně",
+"Zapal 4, pokud použiješ předmět, který není zbraň, nabij toto 1",
+"Pokaždé, když zapálíš, tak zpomal 1",
+"Pokaždé, když zpomalíš, způsob 25 dmg",
+"Pokaždé, když nepřítel použije předmět, zpomal 1",
+"Zapal 10, když zpomalíš, tak nabij 2",
+"Způsob tolik poškození, kolik máš štítu",
+"10 štítu, když použiješ předmět se štítem, tak +5 štítu",
+"všechny štítové předměty získají 5 štítu navíc",
+"Způsob tolik poškození, kolik je 50% tvých životů",
+"Vyleč se tolik, kolik máš životů",
+"Když tě nepřítel poškodí, tak se vyleč 10",
+"Pokaždé, když nepřítel použije předmět, zmraž 1",
+"zmraž vše 3",
+"Na startu, zmraž jeden předmět 100",
+"Dostáváš dvojnásobný počet vítězných bodů",
+"zapal 5, všechny zapalující předměty mají +3 zapálení",
+"vyleč 20,  předmět se štítem nad tímto dostane +5",
+"Když způsobíš poškození, nabij nejpomalješí předmět .5",
+"Když zpomalíš nebo zmrazíš, tak náhodný předmět dostane +10% kritické šance",
+"Přidej tomuto +5% kritické šance,když provedeš kritický útok, nabij náhodný předmět 2",
+"Vyleč 30, zapal 4",
+"náhodný předmět dostane +10, pokud má štít, léčení nebo dmg",
+"zrychli 1 předmět nad tímto",
+"Pokud provedeš kritický útok, zapal 15",
+"Zmraž 2, když zmrazíš 40 dmg",
+"Zrychli 2, když léčíš, nabij 1",
+"Štít 15, zmraž 1",
+"Když zpomalíš, tak dostaneš 20 štítu",
+"Pokud máš tolik předmětů nad tímto, kolik je pod tímto, zrychli sousedící předměty 2",
+"Zbraň nad títmo má +30% kritickou šanci a -10dmg",
+"Zpomal 1, Zkontroluj nejvrchnější předmět s časem, pokud je zpomalený, tak zapal 50",
+"Sousední předměty dostanou +20dmg +20štítu, +20léčení pokud už tuto schopnost mají",
+"čas všech předmětů je zmenšený o 1s",
+"Když zrychlíš nebo nabiješ, 5 štítu",
+"Tvé předměty se štítem mají +20% kritickou šanci",
+"Získej tolik štítu, kolik máš životů",
+"10dmg a Všechny tvé zbraně dostanou +10dmg",
+"5dmg, zpomal 1",
+"5dmg, vyleč 30",
+"Způsob tolik poškození, kolik má nepřítel ohně",
+"5dmg, zapal 3",
+"Tvé předměty s mražením mrazí +1",
+"Když zapálíš, tak zmraž .5",
+"Zpomal 3 předměty 2",
+"5dmg, 10 štítu",
+"zapal 3",
+"Tvé ostatní předměty mají +15% kritickou šanci",
+"10 dmg",
+"10 štítu",
+"10 léčení",
+"Zpomal 1",
+"zmraž 1",
+"Náhodný předmět dostane +10% kritické šance",
+"Zrychli náhodný předmět 1",
+];
     function m(id) {
         return id.replaceAll(' ','_')
     }
@@ -23,7 +87,7 @@
          return `${abi.type}.${m(abi.funcName)}(${abi.data}${upgrade_type})${target}`
     }
     function print_trigger(tri) {
-      return `${m(tri.event)}=>${print_ability(tri.ability)}`
+      return `${m(tri.event)} => ${print_ability(tri.ability)}`
     }
     function array2csv(arr) {
         return arr.map( (row) => {
@@ -43,9 +107,42 @@
       });
       return table;
     }
+    function item_ability_string(item) {
+        var ret = '' 
+        for(let j = 0;j<item.abilities.length;j++){
+            const current_ability = item.abilities[j];
+            if(current_ability.type == "cool"){coolExists = true;}
+            if(current_ability.funcName.includes("start")){
+                ret += "S:";
+            }
+            if(current_ability.funcName.includes("above")){
+                ret += "↑+";
+            }
+            if(current_ability.funcName.includes("below")){
+                ret += "↓+";
+            }
+            if(current_ability.funcName.includes("all")){
+                ret += "↕+";
+            }
+
+            ret += current_ability.data+getEmoji(current_ability.funcName)+" ";
+        }
+
+        for(let j = 0;j<item.triggers.length;j++){
+            let current_trigger = item.triggers[j];
+
+            ret += getEmoji(current_trigger.event);
+
+            ret += ":"
+
+            current_trigger = current_trigger.ability;
+            ret += current_trigger.data+getEmoji(current_trigger.funcName)+" ";
+        }
+        return ret
+    }
       
     var fab_items = [
-      ['id','name','size','time','crit','abilities','triggers']
+      ['id','name','size','time','crit','abilities','triggers', 'abi+trig', 'description']
     ]
 
     ItemLibrary.forEach( (elem, id) => {
@@ -54,9 +151,9 @@
         }).join(' ')
         const triger = elem.triggers.map( (tri) => {
           return print_trigger(tri)
-        }).join(',')
+        }).join(', ')
 
-        fab_items.push([id, elem.name, elem.size, elem.time, elem.crit,ability, triger])
+        fab_items.push([id, elem.name, elem.size, elem.time, elem.crit,ability, triger, item_ability_string(elem), descriptions[id]])
     })
 
     document.getElementById('itemList').innerHTML = array2csv(fab_items)
