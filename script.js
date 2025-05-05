@@ -505,7 +505,7 @@ class Ability{
             for(let j = 0;j<toApply.length;j++){
                 for(let i = 0;i<toApply[j].abilities.length;i++){
                     const currentAbility = toApply[j].abilities[i];
-                    if(currentAbility.funcName == this.upgradeType){
+                    if(this.upgradeType.includes(currentAbility.funcName)){
                         currentAbility.data += this.data;
                     }
                 }
@@ -879,7 +879,17 @@ function ShowBoard(id,board,flipped, color){
         let row = innerTable.insertRow();
         let currentCell =  row.insertCell(0);
 
-        const progressPercentage = (board.Play[i].TimeSpent/board.Play[i].time)*100;
+        let progressPercentage = (board.Play[i].TimeSpent/board.Play[i].time)*100;
+
+        let jeCool = false;
+        for(let j = 0;j<board.Play[i].abilities.length;j++){
+            if(board.Play[i].abilities[j].type == "cool"){
+                jeCool = true;
+            }
+        }
+        if(!jeCool){
+            progressPercentage = 0;
+        }
 
         row.style.backgroundImage = "linear-gradient(to right,rgba(0, 0, 0,0.2) "+ progressPercentage+"%, transparent "+progressPercentage+"%)";
 
@@ -934,22 +944,11 @@ function ShowBoard(id,board,flipped, color){
             current = current.ability;
             currentCell.innerHTML += current.data+getEmoji(current.funcName)+" ";
         }
-        
-    }
-
-    var cells = document.querySelectorAll("#table tr");
-    for (var i = 0; i < cells.length; i++) {
-    cells[i].addEventListener("click", function(){ click(getIndex(this),selectedBoard);});
+        row.addEventListener("click", function(){ click(getIndex(this),selectedBoard);});
     }
 }
 
 function ShowFightTable(){
-    let table = document.getElementById("fightTable");
-    table.innerHTML = '';
-    let NameRow = table.insertRow();
-    NameRow.insertCell(0);
-    NameRow.classList.add("fightTableRow");
-
     let counter = 0;
     for(let i = 0;i<matches.length;i++){
         const currentMatchRow = matches[i];
@@ -1106,7 +1105,7 @@ function random(){
     const M = 1000;
     const A = 809;
 
-    const output = (seed*A)%M;
+    const output = (seed*A+13)%M;
     seed = output;
     return output/1000;
 }
@@ -1119,7 +1118,7 @@ const ItemLibrary = [
     /*1 */new ItemFab("Poloautomatická kuše",2,21,0,[new Ability("dmg",20,null),new Ability("kuse start",0,null),new Ability("kuse",0,null)],[]),
     /*2 */new ItemFab("Balvan",3,20,0,[new Ability("dmg",1000,null)],[]),
     /*3 */new ItemFab("Katapult",3,8,0,[new Ability("dmg",50,null)],[new Trigger("dmg me",new Ability("charge",20,"this"))]),
-    /*4 */new ItemFab("Dvouhlavá hydra",2,1,0,[new Ability("hydra start",15,null),new Ability("upgrade dmg start",0,"all me")],[]),
+    /*4 */new ItemFab("Dvouhlavá hydra",3,1,0,[new Ability("hydra start",15,null),new Ability("upgrade dmg start",0,"all me")],[]),
     /*5 */new ItemFab("Stokrát nic",2,1,0,[new Ability("dmg",0,null)],[]),
     /*6 */new ItemFab("Kamil ze sirotčince",1,3,0,[new Ability("kamil",0,null)],[]),
     /*7 */new ItemFab("Zápalky",1,6,0,[new Ability("burn",4,null)],[new Trigger("not dmg charge me",new Ability("charge",10,"this"))]),
@@ -1143,7 +1142,7 @@ const ItemLibrary = [
     /*25*/new ItemFab("Božské mlýny",2,1,0,[],[new Trigger("slow me",new Ability("crit",10,"me")),new Trigger("freeze me",new Ability("crit",10,"me"))]),
     /*26*/new ItemFab("Kocourovy kritické kroksy",2,4,0,[new Ability("crit",5,"this")],[new Trigger("crit me", new Ability("charge",20,"me"))]),
     /*27*/new ItemFab("Crepe de feu",1,7,0,[new Ability("heal",30,null),new Ability("burn",4,null)],[]),
-    /*28*/new ItemFab("Kouzelný francouzák",2,5,0,[new Ability("upgrade dmg shield heal cool",10,"me")],[]),
+    /*28*/new ItemFab("Kouzelný francouzák",2,5,0,[new Ability("upgrade dmgshieldheal cool",10,"me")],[]),
     /*29*/new ItemFab("Kilo cukru",1,3,0,[new Ability("haste",10,"--")],[]),
     /*30*/new ItemFab("Nažhavené zbraně",3,1,0,[],[new Trigger("crit me", new Ability("burn",15,null))]),
     /*31*/new ItemFab("Blizard v lahvi",1,7,0,[new Ability("freeze",20,"enemy")],[new Trigger("freeze me", new Ability("dmg",30,null))]),
@@ -1153,7 +1152,7 @@ const ItemLibrary = [
     /*35*/new ItemFab("Prokleté váhy",2,4,0,[new Ability("vahy",20,"++"),new Ability("vahy",20,"--")],[]),
     /*36*/new ItemFab("Komicky velké hledí",1,1,0,[new Ability("dmg above",-10,null),new Ability("crit start",30,"--")],[]),
     /*37*/new ItemFab("Útok na palmu",2,6,0,[new Ability("slow",10,"enemy"),new Ability("palma",50,null)],[]),
-    /*38*/new ItemFab("Zlatý marvin",3,7,0,[new Ability("upgrade dmg heal shield cool",20,"++"),new Ability("upgrade dmg heal shield cool",20,"--")],[]),
+    /*38*/new ItemFab("Zlatý marvin",3,7,0,[new Ability("upgrade dmghealshield cool",20,"++"),new Ability("upgrade dmghealshield cool",20,"--")],[]),
     /*39*/new ItemFab("Motivační vlk euroasijský",3,1,0,[new Ability("vlk start",1,null)],[]),
     /*40*/new ItemFab("FVM-DT",1,1,0,[],[new Trigger("haste me",new Ability("shield",10,null)),new Trigger("charge me",new Ability("shield",10,null))]),
     /*41*/new ItemFab("Vajíčka do malty",2,1,0,[new Ability("crit start",20,"shield me")],[]),
@@ -1226,10 +1225,7 @@ function getEmoji(name){
 }
 
 /* todo:
-    hydra bug
-    testnout všechny matche
-
-    Vitas: item tabulka z arraye
+    Vitas test
 
     ----planovaci
     basic itemy
