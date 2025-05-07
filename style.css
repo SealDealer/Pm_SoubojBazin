@@ -9,7 +9,7 @@ td{
 
 #GameTable{
     background-color: rgb(196, 145, 91);
-    height: 550px;
+    height: 700px;
     width: 10%;
 }
 
@@ -27,7 +27,7 @@ td{
 
 #ExampleTables{
     background-color: rgb(196, 145, 91);
-    height: 1100px;
+    height: 1400px;
     width: 100%;
     display: none;
     grid-template-columns: 10% 10% 10% 10% 10% 10% 10% 10% 10% 10%;

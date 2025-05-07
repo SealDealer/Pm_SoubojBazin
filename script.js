@@ -1168,6 +1168,16 @@ const ItemLibrary = [
     /*51*/new ItemFab("Pinokio",1,4,0,[new Ability("dmg",5,null),new Ability("shield",10,null)],[]),
     /*52*/new ItemFab("Táborák",1,3,0,[new Ability("burn",3,null)],[]),
     /*53*/new ItemFab("2048-lístek",1,1,0,[new Ability("crit start",15,"all me")],[]),
+    /*54*/new ItemFab("Tři čuníci",1,7,0,[new Ability("dmg",10,null)],[]),
+    /*55*/new ItemFab("Záplotník nepřehoditelný",1,7,0,[new Ability("shield",10,null)],[]),
+    /*56*/new ItemFab("Tatranka",1,7,0,[new Ability("heal",10,null)],[]),
+    /*57*/new ItemFab("Trojský zajíc",1,5,0,[new Ability("slow",10,null)],[]),
+    /*58*/new ItemFab("Mráz po zádech",1,6,0,[new Ability("freeze",10,null)],[]),
+    /*59*/new ItemFab("Příděly mrkve",1,3,0,[new Ability("crit",10,"me")],[]),
+    /*60*/new ItemFab("7-píďové boty",1,4,0,[new Ability("haste",10,"me")],[]),
+    /*61*/new ItemFab("Univerzální ptakopysk",1,5,0,[new Ability("dmg",1,null),new Ability("shield",1,null),new Ability("heal",1,null)],[]),
+    /*62*/new ItemFab("Siesta",1,8,0,[new Ability("shield",5,null),new Ability("heal",5,null)],[]),
+    /*63*/new ItemFab("Dopravní značení",1,8,0,[new Ability("slow",10,null),new Ability("freeze",10,null)],[]),
 ]
 
 const TeamNames =[
@@ -1223,18 +1233,3 @@ function getEmoji(name){
     }
     return "X";
 }
-
-/* todo:
-    Vitas test
-
-    ----planovaci
-    basic itemy
-    HP rework
-    klátra card builder
-
-    ---nulaprace
-    nabídka další den
-    nabídka size 9
-    každý má ban
-    fix income
-*/
